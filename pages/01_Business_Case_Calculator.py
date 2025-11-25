@@ -1,5 +1,5 @@
 #!/usr/bin/python -tt
-# Project: automation_business_case
+# Project: automation_business_case_calculator
 # Filename: chatgpt7.py
 # claudiadeluna
 # PyCharm
