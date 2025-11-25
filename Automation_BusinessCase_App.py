@@ -11,7 +11,7 @@ st.set_page_config(
 
 cols = st.columns([1, 5, 1])
 with cols[2]:
-    st.image("images/EIA Logo FINAL small_Dark Background.png", width=160)
+    st.image("images/EIA Logo FINAL Large_Dark Background.png")
 
 st.title("Automation Business Case App")
 
@@ -31,14 +31,11 @@ This app helps you build a defensible business case for Network Automation, quan
 3. Use the comparison page to upload two JSON files and benchmark outcomes.
 
 ### Navigate to a page
-- 🧮 **Business Case Calculator**
-
-- 📊 **Business Case Comparison**
-
-Tip: You can always come back to this page from the sidebar to choose a different task.
 """
 )
 
 # Streamlit's page links (visible when running as a multipage app with a /pages directory)
-st.page_link("pages/01_Business_Case_Calculator.py", label="🧮 Open Business Case Calculator", icon="🧮")
-st.page_link("pages/02_Business_Case_Comparison.py", label="📊 Open Business Case Comparison", icon="📊")
+st.page_link("pages/01_Business_Case_Calculator.py", label=" Open Business Case Calculator", icon="🧮")
+st.page_link("pages/02_Business_Case_Comparison.py", label=" Open Business Case Comparison", icon="📊")
+
+st.info("Tip: You can always come back to this page from the sidebar to choose a different task.")
