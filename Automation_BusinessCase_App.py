@@ -5,8 +5,13 @@ from datetime import datetime
 
 st.set_page_config(
     page_title="Automation Business Case App",
+    page_icon="images/EIA_Favicon.png",
     layout="wide",
 )
+
+cols = st.columns([1, 5, 1])
+with cols[2]:
+    st.image("images/EIA Logo FINAL small_Dark Background.png", width=160)
 
 st.title("Automation Business Case App")
 

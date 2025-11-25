@@ -4,9 +4,12 @@ import streamlit as st
 import json
 from typing import Dict, Any
 
-st.set_page_config(page_title="Business Case Comparison", layout="wide")
+st.set_page_config(page_title="Business Case Comparison", page_icon="images/EIA_Favicon.png", layout="wide")
 
 st.title("Business Case Comparison")
+
+with st.sidebar:
+    st.image("images/EIA Logo FINAL small_Round.png", width=64)
 
 st.markdown(
     """

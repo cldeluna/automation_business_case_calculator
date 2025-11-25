@@ -469,6 +469,7 @@ BENEFIT_CATEGORIES = [
 def main():
     st.set_page_config(
         page_title="Network Automation Business Case",
+        page_icon="images/EIA_Favicon.png",
         layout="wide",
     )
 
@@ -503,6 +504,7 @@ def main():
 
     # -------- Sidebar for volume, cost & additional benefits --------
     with st.sidebar:
+        st.image("images/EIA Logo FINAL small_Round.png", width=64)
         st.header("Volume & Cost Assumptions")
 
         switches_per_location = st.number_input(
