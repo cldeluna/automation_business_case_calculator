@@ -1,0 +1,166 @@
+<p align="right">
+  <img src="images/EIA Logo FINAL small_Dark Background.png" alt="EIA Logo" width="180">
+</p>
+
+# Automation Business Case App
+
+Build a defensible, CXO-ready business case for Network Automation. This Streamlit app turns simple engineering inputs (how often a change happens, minutes saved by automation, costs to buy/build, and optional risk “debts”) into finance-friendly outputs: NPV, IRR, payback, cash flows, and a polished Markdown report you can download and share. You can also save scenarios to JSON and compare them side-by-side.
+
+Created by **Claudia de Luna** and **Enterprise Infrastructure Acceleration (EIA)**  
+Contact: <claudia@eianow.com> • https://eianow.com
+
+## Key Features
+- **Business Case Calculator**
+  - Enter volumes and time per step (manual vs automated) for a specific change type.
+  - Model Buy vs Build with itemized one-time and annual run costs.
+  - Optionally include “Debts & Risk” as costs scaled by non-automated scope:
+    - Technical Debt (annual + optional one-time remediation and residual %).
+    - CSAT Debt (annual + optional one-time remediation and residual %).
+  - Add optional business benefits (Revenue Acceleration, Deployment Speed, Compliance, Security, etc.), each with value, methodology, and assumptions.
+  - Computes NPV, IRR, Payback, annual net benefit, and cumulative cash checkpoints (1/3/5 yrs).
+  - Generates a CXO-ready Markdown report and NABCD(E) summary.
+  - Download ZIP containing the Markdown report and a timestamped scenario JSON.
+
+- **Business Case Comparison**
+  - Upload two saved scenario JSON files (e.g., Buy vs Build) and compare key outcomes side-by-side.
+  - Shows deltas for project cost, run cost, total/net benefits, NPV, IRR, and payback.
+
+## App Pages
+- 🧮 `Business Case Calculator` (`pages/01_Business_Case_Calculator.py`)
+  - Interactive inputs and instant calculations.
+  - Report builder and scenario save/load utilities.
+
+- 📊 `Business Case Comparison` (`pages/02_Business_Case_Comparison.py`)
+  - Side-by-side comparison table built from two uploaded scenario JSON files.
+
+## Requirements
+- Python 3.11+ (per pyproject)
+- Streamlit (declared in pyproject)
+
+Install dependencies with pip (reads pyproject):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+If you manage dependencies with a virtual environment, activate it first.
+
+### Using uv (preferred in this repo)
+If you use uv for dependency and environment management:
+
+1) Install uv (macOS):
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# After install, ensure ~/.local/bin (or the printed path) is on your PATH
+```
+
+2) (Optional) Ensure Python 3.11 is available and set for the project:
+
+```bash
+# Install a specific Python if needed
+uv python install 3.11
+```
+
+3) Create a virtual environment (optional) and install dependencies from pyproject:
+
+```bash
+# Create a venv in .venv (optional)
+uv venv .venv
+source .venv/bin/activate
+
+# Install all project dependencies from pyproject.toml
+uv sync
+```
+
+4) Run the app with uv:
+
+```bash
+uv run streamlit run Automation_BusinessCase_App.py
+```
+
+## How to Run
+From this project folder, start the Streamlit app:
+
+```bash
+streamlit run Automation_BusinessCase_App.py
+```
+
+Or with uv:
+
+```bash
+uv run streamlit run Automation_BusinessCase_App.py
+```
+
+Streamlit will open a browser tab. Use the sidebar or the home page links to navigate to:
+- 🧮 Business Case Calculator
+- 📊 Business Case Comparison
+
+## Using the Business Case Calculator
+1. **Initiative details**
+   - Title and short description/scope.
+2. **Volume & cost assumptions (sidebar)**
+   - Switches per location, locations, changes per month, automation coverage %, engineer hourly rate.
+3. **Acquisition strategy**
+   - Choose Buy tool(s) or Build in-house and enter one-time + annual costs.
+4. **Debts & Risk (optional)**
+   - Toggle Technical Debt and/or CSAT Debt. Enter 100% annual impact, remediation cost (optional), and residual %.
+5. **Additional Benefits (optional)**
+   - Check any categories that apply and provide annual value, methodology, and typical assumptions.
+6. **Manual vs Automated time per change**
+   - Enter minutes for the 8 workflow steps on both sides.
+7. **Calculate Business Case**
+   - The app computes hours saved, annual benefits, net benefit after run costs, cash flows (Year 0–5), NPV, IRR, and payback.
+8. **Review Outputs**
+   - Business Case Summary, Cost Modeling table, Cash Flows, Metrics, Cumulative checkpoints, Sanity-check panel.
+9. **NABCD(E) Summary**
+   - Copy-pasteable summary aligned to Need, Approach, Benefits, Competitiveness, Defensibility, Exit/Ask.
+10. **Download**
+   - Download the full Markdown report, or a ZIP containing the report and scenario JSON.
+11. **Save/Load Scenarios**
+   - Download a JSON describing your inputs and results.
+   - Upload a saved JSON to rebuild the Markdown report later.
+
+## Using the Comparison Page
+1. Prepare two scenario JSON files (e.g., one for “Buy”, one for “Build”).
+2. Open 📊 Business Case Comparison.
+3. Provide short slugs for each scenario (labels).
+4. Upload the JSON files. The table shows A vs B with deltas for:
+   - Project cost, annual run cost (effective), total benefits, net benefits, NPV, IRR, payback.
+
+## Scenario JSON Structure (high level)
+The downloaded JSON includes inputs and computed outputs. Key fields:
+- Inputs: `years`, `automation_title`, `automation_description`, device counts, `tasks_per_year`, `automation_coverage_pct`, `hourly_rate`, manual/automated minutes, `acquisition_strategy`, `cost_breakdown`, debts toggles and parameters, `benefits`.
+- Outputs: `annual_hours_saved`, `annual_cost_savings`, `annual_total_benefit`, `annual_run_cost_effective`, `annual_net_benefit`, `project_cost`, `discount_rate_pct`, `cash_flows`, `npv`, `payback`, `irr`, `cum_1`, `cum_3`, `cum_5`.
+
+## Notes and Assumptions
+- NPV/IRR are computed from Year 0 to Year 5 using your discount rate.
+- Payback is undiscounted and shown in fractional years when applicable.
+- Technical/CSAT debt costs are applied to the non-automated portion of the scope and can include remediation effects.
+- IRR may be “not meaningful” if cash flows do not change sign.
+
+## Troubleshooting
+- If the browser does not open, visit the URL shown in your terminal (e.g., http://localhost:8501).
+- If you see import errors, ensure Streamlit is installed in the active environment.
+- For strange IRR results, verify that net cash flows change sign (negative Year 0, positive subsequent years).
+
+## Tech Stack
+- Python, Streamlit
+
+## Project Structure
+- `Automation_BusinessCase_App.py` – Home/landing page and navigation links.
+- `pages/01_Business_Case_Calculator.py` – Main calculator, report builder, scenario save/load, ZIP download.
+- `pages/02_Business_Case_Comparison.py` – Scenario comparison tool.
+
+## Guiding Quote
+> According to Darwin's Origin of Species, it is not the most intellectual of the species that survives; it is not the strongest that survives; but the species that survives is the one that is able best to adapt and adjust to the changing environment in which it finds itself.
+>
+> — Leon C. Megginson, “Lessons from Europe for American Business,” Southwestern Social Science Quarterly (1963) 44(1): 3–13, p. 4. Context: the quote originated as a paraphrase of Darwin.
+
+## License
+Licensed under the **Apache License, Version 2.0**. See [`LICENSE`](./LICENSE) for details.
+
+Attribution notices are provided in [`NOTICE`](./NOTICE). When redistributing in source or binary form, preserve the LICENSE and NOTICE files.
+
