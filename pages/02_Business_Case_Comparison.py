@@ -1,10 +1,24 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -tt
+# Project: automation_business_case_calculator
+# Filename: 02_Business_Case_Comparison.py
+# claudiadeluna
+# PyCharm
+
+__author__ = "Claudia de Luna (claudia@indigowire.net)"
+__version__ = ": 1.0 $"
+__date__ = "11/25/25"
+__copyright__ = "Copyright (c) 2025 Claudia"
+__license__ = "Python"
 
 import streamlit as st
 import json
 from typing import Dict, Any
 
-st.set_page_config(page_title="Business Case Comparison", page_icon="images/EIA_Favicon.png", layout="wide")
+st.set_page_config(
+    page_title="Business Case Comparison",
+    page_icon="images/EIA_Favicon.png",
+    layout="wide",
+)
 
 st.title("Business Case Comparison")
 
@@ -48,19 +62,25 @@ if file_a is not None and file_b is not None:
             a = val(dataA, key, 0.0)
             b = val(dataB, key, 0.0)
             delta = b - a
-            rows.append({
-                "Metric": name,
-                slug_a: fmt.format(a) if isinstance(a, float) else a,
-                slug_b: fmt.format(b) if isinstance(b, float) else b,
-                "Delta (B−A)": fmt.format(delta) if isinstance(delta, float) else delta,
-            })
+            rows.append(
+                {
+                    "Metric": name,
+                    slug_a: fmt.format(a) if isinstance(a, float) else a,
+                    slug_b: fmt.format(b) if isinstance(b, float) else b,
+                    "Delta (B−A)": (
+                        fmt.format(delta) if isinstance(delta, float) else delta
+                    ),
+                }
+            )
 
-        rows.append({
-            "Metric": "Acquisition strategy",
-            slug_a: dataA.get("acquisition_strategy", ""),
-            slug_b: dataB.get("acquisition_strategy", ""),
-            "Delta (B−A)": "",
-        })
+        rows.append(
+            {
+                "Metric": "Acquisition strategy",
+                slug_a: dataA.get("acquisition_strategy", ""),
+                slug_b: dataB.get("acquisition_strategy", ""),
+                "Delta (B−A)": "",
+            }
+        )
         add_row("Project cost (Y0)", "project_cost")
         add_row("Annual run cost (effective)", "annual_run_cost_effective")
         add_row("Annual total benefit", "annual_total_benefit")
@@ -69,21 +89,33 @@ if file_a is not None and file_b is not None:
         # IRR expected as decimal; show as percent
         a_irr = val(dataA, "irr", 0.0)
         b_irr = val(dataB, "irr", 0.0)
-        rows.append({
-            "Metric": "IRR (%)",
-            slug_a: f"{a_irr*100:,.2f}%",
-            slug_b: f"{b_irr*100:,.2f}%",
-            "Delta (B−A)": f"{(b_irr - a_irr)*100:,.2f}%",
-        })
+        rows.append(
+            {
+                "Metric": "IRR (%)",
+                slug_a: f"{a_irr*100:,.2f}%",
+                slug_b: f"{b_irr*100:,.2f}%",
+                "Delta (B−A)": f"{(b_irr - a_irr)*100:,.2f}%",
+            }
+        )
         # Payback (years)
         a_pb = dataA.get("payback", None)
         b_pb = dataB.get("payback", None)
-        rows.append({
-            "Metric": "Payback (years)",
-            slug_a: (f"{a_pb:,.2f}" if isinstance(a_pb, (int, float)) else str(a_pb)),
-            slug_b: (f"{b_pb:,.2f}" if isinstance(b_pb, (int, float)) else str(b_pb)),
-            "Delta (B−A)": (f"{(b_pb - a_pb):,.2f}" if isinstance(a_pb, (int, float)) and isinstance(b_pb, (int, float)) else ""),
-        })
+        rows.append(
+            {
+                "Metric": "Payback (years)",
+                slug_a: (
+                    f"{a_pb:,.2f}" if isinstance(a_pb, (int, float)) else str(a_pb)
+                ),
+                slug_b: (
+                    f"{b_pb:,.2f}" if isinstance(b_pb, (int, float)) else str(b_pb)
+                ),
+                "Delta (B−A)": (
+                    f"{(b_pb - a_pb):,.2f}"
+                    if isinstance(a_pb, (int, float)) and isinstance(b_pb, (int, float))
+                    else ""
+                ),
+            }
+        )
 
         st.markdown("### Comparison Table")
         st.table(rows)

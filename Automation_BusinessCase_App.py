@@ -1,4 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -tt
+# Project: automation_business_case_calculator
+# Filename: Automation_BusinessCase_App.py
+# claudiadeluna
+# PyCharm
+
+__author__ = "Claudia de Luna (claudia@indigowire.net)"
+__version__ = ": 1.0 $"
+__date__ = "11/25/25"
+__copyright__ = "Copyright (c) 2025 Claudia"
+__license__ = "Python"
 
 import streamlit as st
 from datetime import datetime
@@ -35,7 +45,17 @@ This app helps you build a defensible business case for Network Automation, quan
 )
 
 # Streamlit's page links (visible when running as a multipage app with a /pages directory)
-st.page_link("pages/01_Business_Case_Calculator.py", label=" Open Business Case Calculator", icon="🧮")
-st.page_link("pages/02_Business_Case_Comparison.py", label=" Open Business Case Comparison", icon="📊")
+st.page_link(
+    "pages/01_Business_Case_Calculator.py",
+    label=" Open Business Case Calculator",
+    icon="🧮",
+)
+st.page_link(
+    "pages/02_Business_Case_Comparison.py",
+    label=" Open Business Case Comparison",
+    icon="📊",
+)
 
-st.info("Tip: You can always come back to this page from the sidebar to choose a different task.")
+st.info(
+    "Tip: You can always come back to this page from the sidebar to choose a different task."
+)

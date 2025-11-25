@@ -1,21 +1,15 @@
-#!/usr/bin/python -tt
+#!/usr/bin/python3 -tt
 # Project: automation_business_case_calculator
-# Filename: chatgpt7.py
+# Filename: 01_Business_Case_Calculator.py
 # claudiadeluna
 # PyCharm
-
-from __future__ import absolute_import, division, print_function
 
 __author__ = "Claudia de Luna (claudia@indigowire.net)"
 __version__ = ": 1.0 $"
 __date__ = "11/25/25"
-__copyright__ = "Copyright (c) 2023 Claudia"
+__copyright__ = "Copyright (c) 2025 Claudia"
 __license__ = "Python"
 
-import argparse
-
-
-#!/usr/bin/env python3
 
 import streamlit as st
 from typing import List, Optional, Dict, Any
@@ -25,6 +19,7 @@ from io import BytesIO
 import zipfile
 
 # ---------- Financial helper functions ----------
+
 
 def compute_npv(discount_rate: float, cash_flows: List[float]) -> float:
     """
@@ -57,9 +52,9 @@ def compute_payback_period(cash_flows: List[float]) -> Optional[float]:
     return None
 
 
-def compute_irr(cash_flows: List[float],
-                guess_low: float = -0.9,
-                guess_high: float = 10.0) -> Optional[float]:
+def compute_irr(
+    cash_flows: List[float], guess_low: float = -0.9, guess_high: float = 10.0
+) -> Optional[float]:
     """
     Very simple IRR calculation using binary search.
 
@@ -93,6 +88,7 @@ def compute_irr(cash_flows: List[float],
 
 # ---------- NABCD(E) summary builder ----------
 
+
 def build_nabcde_summary(
     years: int,
     automation_title: str,
@@ -117,11 +113,11 @@ def build_nabcde_summary(
     payback_text = (
         f"{payback:.2f} years" if payback is not None else "beyond the modeled period"
     )
-    irr_text = (
-        f"{irr*100:.2f}%" if irr is not None and irr > -1 else "not meaningful"
-    )
+    irr_text = f"{irr*100:.2f}%" if irr is not None and irr > -1 else "not meaningful"
 
-    desc_block = f" ({automation_description.strip()})" if automation_description.strip() else ""
+    desc_block = (
+        f" ({automation_description.strip()})" if automation_description.strip() else ""
+    )
 
     # Approach string varies by Buy vs Build to show consequences
     if (acquisition_strategy or "").lower().startswith("buy"):
@@ -153,6 +149,7 @@ def build_nabcde_summary(
 
 
 # ---------- Markdown report builder ----------
+
 
 def build_markdown_report(
     years: int,
@@ -209,19 +206,27 @@ def build_markdown_report(
     cash_flow_table = "\n".join(cash_flow_lines)
 
     payback_text = (
-        f"{payback:.2f} years" if payback is not None else "Not reached within model horizon (beyond model years)"
+        f"{payback:.2f} years"
+        if payback is not None
+        else "Not reached within model horizon (beyond model years)"
     )
     irr_text = (
-        f"{irr*100:.2f}%" if irr is not None and irr > -1 else "Not meaningful / not found"
+        f"{irr*100:.2f}%"
+        if irr is not None and irr > -1
+        else "Not meaningful / not found"
     )
 
     scope_lines = ""
     if switches_per_location > 0:
-        scope_lines += f"- **Switches per location (avg):** {switches_per_location:,.1f}\n"
+        scope_lines += (
+            f"- **Switches per location (avg):** {switches_per_location:,.1f}\n"
+        )
     if num_locations > 0:
         scope_lines += f"- **Locations impacted:** {num_locations:,.0f}\n"
     if total_switches > 0:
-        scope_lines += f"- **Estimated total switches/devices in scope:** {total_switches:,.0f}\n"
+        scope_lines += (
+            f"- **Estimated total switches/devices in scope:** {total_switches:,.0f}\n"
+        )
 
     desc_block = (
         f"\n\n**Description / Scope**  \n{automation_description.strip()}\n"
@@ -246,7 +251,9 @@ def build_markdown_report(
             )
         benefits_block = "\n".join(benefit_lines)
     else:
-        benefits_block = "No additional benefits beyond engineer time-savings were specified."
+        benefits_block = (
+            "No additional benefits beyond engineer time-savings were specified."
+        )
 
     # Build Cost Modeling table
     if cost_breakdown:
@@ -261,7 +268,11 @@ def build_markdown_report(
 
     # Determine if CSAT debt is present in cost breakdown (amount > 0)
     csat_present = any(
-        (isinstance(item, dict) and str(item.get('name','')).lower().startswith('csat debt') and item.get('amount', 0.0) > 0)
+        (
+            isinstance(item, dict)
+            and str(item.get("name", "")).lower().startswith("csat debt")
+            and item.get("amount", 0.0) > 0
+        )
         for item in cost_breakdown
     )
 
@@ -275,7 +286,11 @@ def build_markdown_report(
 
     items = [
         "- Deferring or avoiding incremental hiring for repetitive work  ",
-        ("- Improved customer satisfaction (included in this model), reducing churn/credits/support  " if csat_present else ""),
+        (
+            "- Improved customer satisfaction (included in this model), reducing churn/credits/support  "
+            if csat_present
+            else ""
+        ),
         tech_line,
         "- Reduced delays on other initiatives due to freed engineer capacity  ",
         "- Higher team morale by shifting work toward higher-value tasks  ",
@@ -287,20 +302,12 @@ def build_markdown_report(
     is_buy = (acquisition_strategy or "").lower().startswith("buy")
     approach_decision = "Buy" if is_buy else "Build"
     if is_buy:
-        approach_consequences = (
-            "Buy – faster time-to-value, less internal engineering, vendor dependency, predictable support SLAs."
-        )
-        approach_intro = (
-            "Implement a network automation solution that handles the repetitive parts of the workflow:"
-        )
+        approach_consequences = "Buy – faster time-to-value, less internal engineering, vendor dependency, predictable support SLAs."
+        approach_intro = "Implement a network automation solution that handles the repetitive parts of the workflow:"
         annual_run_label = "licenses/support"
     else:
-        approach_consequences = (
-            "Build – greater control and fit, team skill growth, longer time-to-value, internal opportunity cost."
-        )
-        approach_intro = (
-            "Implement in-house automation that handles the repetitive parts of the workflow:"
-        )
+        approach_consequences = "Build – greater control and fit, team skill growth, longer time-to-value, internal opportunity cost."
+        approach_intro = "Implement in-house automation that handles the repetitive parts of the workflow:"
         annual_run_label = "support/maintenance"
 
     report = f"""# {title} – Network Automation Business Case
@@ -513,7 +520,7 @@ def main():
             value=10,
             step=1,
             help="This can be an average number of network switches (L2 and L3) "
-                 "or network devices per location.",
+            "or network devices per location.",
         )
 
         num_locations = st.number_input(
@@ -522,7 +529,7 @@ def main():
             value=250,
             step=10,
             help="This can be an estimated number of locations which will be impacted "
-                 "by this operational improvement.",
+            "by this operational improvement.",
         )
 
         total_switches = switches_per_location * num_locations
@@ -534,7 +541,7 @@ def main():
         tasks_per_month = st.number_input(
             "Changes per month (this type of change across the network)",
             min_value=0.0,
-            value=5.0,      # default per your assumption
+            value=5.0,  # default per your assumption
             step=1.0,
         )
         tasks_per_year = tasks_per_month * 12
@@ -604,20 +611,40 @@ def main():
 
             # Itemized breakdown for report/UI
             cost_breakdown = [
-                {"name": "Tool license(s)", "timing": "One-time", "amount": buy_tool_cost},
-                {"name": "Integration/implementation", "timing": "One-time", "amount": buy_integration_cost},
+                {
+                    "name": "Tool license(s)",
+                    "timing": "One-time",
+                    "amount": buy_tool_cost,
+                },
+                {
+                    "name": "Integration/implementation",
+                    "timing": "One-time",
+                    "amount": buy_integration_cost,
+                },
                 {"name": "Training", "timing": "One-time", "amount": buy_training_cost},
-                {"name": "Ongoing support & maintenance", "timing": "Annual", "amount": buy_ongoing_support},
+                {
+                    "name": "Ongoing support & maintenance",
+                    "timing": "Annual",
+                    "amount": buy_ongoing_support,
+                },
             ]
 
             # Validation: flag zeros to confirm
             zero_fields = []
-            if buy_tool_cost == 0: zero_fields.append("Tool license(s)")
-            if buy_integration_cost == 0: zero_fields.append("Integration/implementation")
-            if buy_training_cost == 0: zero_fields.append("Training")
-            if buy_ongoing_support == 0: zero_fields.append("Ongoing support & maintenance")
+            if buy_tool_cost == 0:
+                zero_fields.append("Tool license(s)")
+            if buy_integration_cost == 0:
+                zero_fields.append("Integration/implementation")
+            if buy_training_cost == 0:
+                zero_fields.append("Training")
+            if buy_ongoing_support == 0:
+                zero_fields.append("Ongoing support & maintenance")
             if zero_fields:
-                st.warning("You entered $0 for: " + ", ".join(zero_fields) + ". Confirm these should truly be zero.")
+                st.warning(
+                    "You entered $0 for: "
+                    + ", ".join(zero_fields)
+                    + ". Confirm these should truly be zero."
+                )
 
         else:  # Build in-house
             st.caption("Specify one-time and ongoing costs for building in-house.")
@@ -655,25 +682,51 @@ def main():
 
             # Itemized breakdown for report/UI
             cost_breakdown = [
-                {"name": "Development effort", "timing": "One-time", "amount": build_dev_effort},
-                {"name": "Staff opportunity cost", "timing": "One-time", "amount": build_opportunity},
-                {"name": "Training", "timing": "One-time", "amount": build_training_cost},
-                {"name": "Ongoing support & maintenance", "timing": "Annual", "amount": build_ongoing_support},
+                {
+                    "name": "Development effort",
+                    "timing": "One-time",
+                    "amount": build_dev_effort,
+                },
+                {
+                    "name": "Staff opportunity cost",
+                    "timing": "One-time",
+                    "amount": build_opportunity,
+                },
+                {
+                    "name": "Training",
+                    "timing": "One-time",
+                    "amount": build_training_cost,
+                },
+                {
+                    "name": "Ongoing support & maintenance",
+                    "timing": "Annual",
+                    "amount": build_ongoing_support,
+                },
             ]
 
             # Validation: flag zeros to confirm
             zero_fields = []
-            if build_dev_effort == 0: zero_fields.append("Development effort")
-            if build_opportunity == 0: zero_fields.append("Staff opportunity cost")
-            if build_training_cost == 0: zero_fields.append("Training")
-            if build_ongoing_support == 0: zero_fields.append("Ongoing support & maintenance")
+            if build_dev_effort == 0:
+                zero_fields.append("Development effort")
+            if build_opportunity == 0:
+                zero_fields.append("Staff opportunity cost")
+            if build_training_cost == 0:
+                zero_fields.append("Training")
+            if build_ongoing_support == 0:
+                zero_fields.append("Ongoing support & maintenance")
             if zero_fields:
-                st.warning("You entered $0 for: " + ", ".join(zero_fields) + ". Confirm these should truly be zero.")
+                st.warning(
+                    "You entered $0 for: "
+                    + ", ".join(zero_fields)
+                    + ". Confirm these should truly be zero."
+                )
 
         # Debts & Risk (Optional) – Technical debt modeled from automation coverage
         st.markdown("---")
         st.subheader("Debts & Risk (Optional)")
-        st.caption("Technical debt is assumed to impact the non-automated portion of the estate.")
+        st.caption(
+            "Technical debt is assumed to impact the non-automated portion of the estate."
+        )
         include_tech_debt = st.checkbox(
             "Include technical debt as an additional annual cost",
             value=False,
@@ -700,7 +753,9 @@ def main():
             tech_debt_base_annual = float(base_tech_debt_annual)
             tech_debt_impact_pct = impact_pct
             tech_debt_annual = base_tech_debt_annual * impact_pct
-            st.info(f"Calculated technical debt (annual): ${tech_debt_annual:,.0f} (impact {impact_pct*100:.0f}%)")
+            st.info(
+                f"Calculated technical debt (annual): ${tech_debt_annual:,.0f} (impact {impact_pct*100:.0f}%)"
+            )
 
             include_remediation = st.checkbox(
                 "This automation includes technical debt remediation",
@@ -731,17 +786,21 @@ def main():
             if include_remediation:
                 tech_reduction_pct = 100.0 - float(residual_pct)
             # Append to cost breakdown for reporting
-            cost_breakdown.append({
-                "name": "Technical debt (annual, adjusted by automation)",
-                "timing": "Annual",
-                "amount": tech_debt_annual_after,
-            })
+            cost_breakdown.append(
+                {
+                    "name": "Technical debt (annual, adjusted by automation)",
+                    "timing": "Annual",
+                    "amount": tech_debt_annual_after,
+                }
+            )
             if tech_debt_remediation_one_time > 0:
-                cost_breakdown.append({
-                    "name": "Technical debt remediation",
-                    "timing": "One-time",
-                    "amount": tech_debt_remediation_one_time,
-                })
+                cost_breakdown.append(
+                    {
+                        "name": "Technical debt remediation",
+                        "timing": "One-time",
+                        "amount": tech_debt_remediation_one_time,
+                    }
+                )
 
         # CSAT debt (Optional) – modeled similarly, scaled by non-automated portion
         include_csat_debt = st.checkbox(
@@ -769,7 +828,9 @@ def main():
             csat_debt_base_annual = float(base_csat_debt_annual)
             csat_debt_impact_pct = impact_pct
             csat_debt_annual = base_csat_debt_annual * impact_pct
-            st.info(f"Calculated CSAT debt (annual): ${csat_debt_annual:,.0f} (impact {impact_pct*100:.0f}%)")
+            st.info(
+                f"Calculated CSAT debt (annual): ${csat_debt_annual:,.0f} (impact {impact_pct*100:.0f}%)"
+            )
 
             include_csat_remediation = st.checkbox(
                 "This automation includes CSAT debt remediation",
@@ -797,36 +858,50 @@ def main():
                 csat_debt_residual_pct = csat_residual_pct
 
             csat_debt_annual_after = csat_debt_annual * (csat_residual_pct / 100.0)
-            cost_breakdown.append({
-                "name": "CSAT debt (annual, adjusted by automation)",
-                "timing": "Annual",
-                "amount": csat_debt_annual_after,
-            })
+            cost_breakdown.append(
+                {
+                    "name": "CSAT debt (annual, adjusted by automation)",
+                    "timing": "Annual",
+                    "amount": csat_debt_annual_after,
+                }
+            )
             if csat_debt_remediation_one_time > 0:
-                cost_breakdown.append({
-                    "name": "CSAT debt remediation",
-                    "timing": "One-time",
-                    "amount": csat_debt_remediation_one_time,
-                })
+                cost_breakdown.append(
+                    {
+                        "name": "CSAT debt remediation",
+                        "timing": "One-time",
+                        "amount": csat_debt_remediation_one_time,
+                    }
+                )
 
         # Summary of costs at bottom of section (vertical for readability)
         st.markdown("**Cost summary (USD)**")
         first_year_total_cost = (
-            project_cost + annual_run_cost + tech_debt_annual_after + tech_debt_remediation_one_time
-            + csat_debt_annual_after + csat_debt_remediation_one_time
+            project_cost
+            + annual_run_cost
+            + tech_debt_annual_after
+            + tech_debt_remediation_one_time
+            + csat_debt_annual_after
+            + csat_debt_remediation_one_time
         )
         st.write(f"- One-time project cost (Year 0): ${project_cost:,.0f}")
         st.write(f"- Annual run cost (per year): ${annual_run_cost:,.0f}")
         if include_tech_debt:
             st.write(f"- Technical debt (annual): ${tech_debt_annual_after:,.0f}")
             if tech_debt_remediation_one_time:
-                st.write(f"- Technical debt remediation (one-time): ${tech_debt_remediation_one_time:,.0f}")
+                st.write(
+                    f"- Technical debt remediation (one-time): ${tech_debt_remediation_one_time:,.0f}"
+                )
         if include_csat_debt:
             st.write(f"- CSAT debt (annual): ${csat_debt_annual_after:,.0f}")
             if csat_debt_remediation_one_time:
-                st.write(f"- CSAT debt remediation (one-time): ${csat_debt_remediation_one_time:,.0f}")
+                st.write(
+                    f"- CSAT debt remediation (one-time): ${csat_debt_remediation_one_time:,.0f}"
+                )
         st.write(f"- First-year total cost: ${first_year_total_cost:,.0f}")
-        st.caption("Project cost is incurred in Year 0; annual run cost recurs each year.")
+        st.caption(
+            "Project cost is incurred in Year 0; annual run cost recurs each year."
+        )
 
         discount_rate_pct = st.number_input(
             "Discount rate / hurdle rate (%)",
@@ -896,11 +971,13 @@ def main():
                         step=500.0,
                         key=f"{key}_value_per_day",
                         help="Rough value of a site being 'fully live' per day "
-                             "(revenue, productivity, cost avoidance, etc.).",
+                        "(revenue, productivity, cost avoidance, etc.).",
                     )
 
                     days_saved_per_site = max(manual_days - auto_days, 0.0)
-                    suggested_value = days_saved_per_site * value_per_site_day * sites_per_year
+                    suggested_value = (
+                        days_saved_per_site * value_per_site_day * sites_per_year
+                    )
 
                     st.info(
                         f"Suggested annual value from waiting-time reduction: "
@@ -918,7 +995,9 @@ def main():
                         f"business value ≈ ${value_per_site_day:,.0f} per site per day."
                     )
 
-                annual_value_default = float(suggested_value) if suggested_value is not None else 0.0
+                annual_value_default = (
+                    float(suggested_value) if suggested_value is not None else 0.0
+                )
 
                 annual_value = st.number_input(
                     f"{label} – Annual value (USD/year)",
@@ -1093,9 +1172,13 @@ def main():
 
     tcol1, tcol2 = st.columns(2)
     with tcol1:
-        st.metric(label="Total manual minutes per change", value=f"{manual_total_preview}")
+        st.metric(
+            label="Total manual minutes per change", value=f"{manual_total_preview}"
+        )
     with tcol2:
-        st.metric(label="Total automated minutes per change", value=f"{auto_total_preview}")
+        st.metric(
+            label="Total automated minutes per change", value=f"{auto_total_preview}"
+        )
 
     if st.button("Calculate Business Case"):
         # --- Time & operational savings ---
@@ -1143,7 +1226,9 @@ def main():
         # Net after run cost
         # Adjust costs with technical debt if included
         project_cost += tech_debt_remediation_one_time + csat_debt_remediation_one_time
-        annual_run_cost_effective = annual_run_cost + tech_debt_annual_after + csat_debt_annual_after
+        annual_run_cost_effective = (
+            annual_run_cost + tech_debt_annual_after + csat_debt_annual_after
+        )
         annual_net_benefit = annual_total_benefit - annual_run_cost_effective
 
         discount_rate = discount_rate_pct / 100.0
@@ -1193,28 +1278,42 @@ def main():
         mcol1, mcol2 = st.columns(2)
 
         with mcol1:
-            st.write(f"**Initiative title:** {automation_title or 'Network Automation Initiative'}")
+            st.write(
+                f"**Initiative title:** {automation_title or 'Network Automation Initiative'}"
+            )
             if automation_description.strip():
                 st.write(f"**Description:** {automation_description}")
             st.write(f"**Switches per location (avg):** {switches_per_location:,.1f}")
             st.write(f"**Locations impacted:** {num_locations:,.0f}")
             st.write(f"**Estimated total switches/devices:** {total_switches:,.0f}")
             st.write(f"**Changes per year:** {tasks_per_year:,.0f} changes/year")
-            st.write(f"**Automation coverage:** {automation_coverage_pct:.1f}% of changes/year")
+            st.write(
+                f"**Automation coverage:** {automation_coverage_pct:.1f}% of changes/year"
+            )
             st.write(f"**Engineer hourly cost:** ${hourly_rate:,.2f} USD/hour")
-            st.write(f"**Manual time per change:** {manual_total_minutes:.1f} minutes/change")
-            st.write(f"**Automated time per change:** {auto_total_minutes:.1f} minutes/change")
-            st.write(f"**Time saved per change:** {minutes_saved_per_change:.1f} minutes/change")
+            st.write(
+                f"**Manual time per change:** {manual_total_minutes:.1f} minutes/change"
+            )
+            st.write(
+                f"**Automated time per change:** {auto_total_minutes:.1f} minutes/change"
+            )
+            st.write(
+                f"**Time saved per change:** {minutes_saved_per_change:.1f} minutes/change"
+            )
 
             st.write(f"**Annual hours saved:** {annual_hours_saved:,.1f} hours/year")
 
         with mcol2:
             st.write("**Annual benefit breakdown:**")
-            st.write(f"- Operational efficiency (time): ${annual_cost_savings:,.2f} USD/year")
-            st.write(f"- Additional benefits (sum of checked items): ${annual_additional_benefits:,.2f} USD/year")
+            st.write(
+                f"- Operational efficiency (time): ${annual_cost_savings:,.2f} USD/year"
+            )
+            st.write(
+                f"- Additional benefits (sum of checked items): ${annual_additional_benefits:,.2f} USD/year"
+            )
             if benefit_inputs:
                 st.write("  - Included benefit categories:")
-                cats = sorted({b['category'] for b in benefit_inputs})
+                cats = sorted({b["category"] for b in benefit_inputs})
                 for c in cats:
                     st.write(f"    • {c}")
             st.write(f"**Total annual benefit:** ${annual_total_benefit:,.2f} USD/year")
@@ -1228,15 +1327,19 @@ def main():
         st.write(f"**Acquisition strategy:** {acquisition_strategy}")
         cb_rows = []
         for item in cost_breakdown:
-            cb_rows.append({
-                "Cost item": item.get("name", ""),
-                "Timing": item.get("timing", ""),
-                "Amount (USD)": f"${item.get('amount', 0.0):,.2f}",
-            })
+            cb_rows.append(
+                {
+                    "Cost item": item.get("name", ""),
+                    "Timing": item.get("timing", ""),
+                    "Amount (USD)": f"${item.get('amount', 0.0):,.2f}",
+                }
+            )
         st.table(cb_rows)
         st.write(f"**One-time project cost (Year 0):** ${project_cost:,.2f} USD")
         st.write(f"**Annual run cost:** ${annual_run_cost_effective:,.2f} USD/year")
-        st.write(f"**First-year total cost:** ${project_cost + annual_run_cost_effective:,.2f} USD")
+        st.write(
+            f"**First-year total cost:** ${project_cost + annual_run_cost_effective:,.2f} USD"
+        )
 
         st.subheader("Cash Flows (Year 0–5)")
 
@@ -1248,10 +1351,14 @@ def main():
         st.subheader("Key Financial Metrics")
 
         payback_text = (
-            f"{payback:.2f} years" if payback is not None else "Not reached within model horizon (beyond model years)"
+            f"{payback:.2f} years"
+            if payback is not None
+            else "Not reached within model horizon (beyond model years)"
         )
         irr_text = (
-            f"{irr*100:.2f}%" if irr is not None and irr > -1 else "Not meaningful / not found"
+            f"{irr*100:.2f}%"
+            if irr is not None and irr > -1
+            else "Not meaningful / not found"
         )
 
         metrics_rows = [
@@ -1330,17 +1437,23 @@ def main():
             "- Deferring/avoiding incremental hiring for repetitive changes",
         ]
         if include_csat_debt and csat_debt_annual_after > 0:
-            caption_lines.append("- Improved customer satisfaction (included in this model)")
+            caption_lines.append(
+                "- Improved customer satisfaction (included in this model)"
+            )
         if include_tech_debt and tech_debt_annual_after > 0:
             if tech_reduction_pct is not None:
-                caption_lines.append(f"- Reduced technical debt (remediated by {tech_reduction_pct:.0f}%)")
+                caption_lines.append(
+                    f"- Reduced technical debt (remediated by {tech_reduction_pct:.0f}%)"
+                )
             else:
                 caption_lines.append("- Reduced technical debt")
-        caption_lines.extend([
-            "- Reduced delays on adjacent initiatives from freed capacity",
-            "- Increased team morale and engagement",
-            "- Reduced skills gaps as staff gain time to learn and cross-train",
-        ])
+        caption_lines.extend(
+            [
+                "- Reduced delays on adjacent initiatives from freed capacity",
+                "- Increased team morale and engagement",
+                "- Reduced skills gaps as staff gain time to learn and cross-train",
+            ]
+        )
         st.caption("\n".join(caption_lines))
 
         # --- Assumption sanity-check panel ---
@@ -1348,50 +1461,76 @@ def main():
         st.markdown("---")
         st.subheader("Assumption Sanity-Check (per switch, per site, per change)")
 
-        hours_per_switch_per_year = annual_hours_saved / total_switches if total_switches > 0 else None
-        hours_per_site_per_year = annual_hours_saved / num_locations if num_locations > 0 else None
-        benefit_per_switch_per_year = annual_total_benefit / total_switches if total_switches > 0 else None
-        benefit_per_site_per_year = annual_total_benefit / num_locations if num_locations > 0 else None
-        benefit_per_change = annual_total_benefit / tasks_per_year if tasks_per_year > 0 else None
+        hours_per_switch_per_year = (
+            annual_hours_saved / total_switches if total_switches > 0 else None
+        )
+        hours_per_site_per_year = (
+            annual_hours_saved / num_locations if num_locations > 0 else None
+        )
+        benefit_per_switch_per_year = (
+            annual_total_benefit / total_switches if total_switches > 0 else None
+        )
+        benefit_per_site_per_year = (
+            annual_total_benefit / num_locations if num_locations > 0 else None
+        )
+        benefit_per_change = (
+            annual_total_benefit / tasks_per_year if tasks_per_year > 0 else None
+        )
 
         sanity_rows = []
 
-        sanity_rows.append({
-            "Metric": "Hours saved per change",
-            "Value": f"{hours_saved_per_change:.2f} hours/change",
-        })
-        sanity_rows.append({
-            "Metric": "Hours saved per year (total)",
-            "Value": f"{annual_hours_saved:,.2f} hours/year",
-        })
+        sanity_rows.append(
+            {
+                "Metric": "Hours saved per change",
+                "Value": f"{hours_saved_per_change:.2f} hours/change",
+            }
+        )
+        sanity_rows.append(
+            {
+                "Metric": "Hours saved per year (total)",
+                "Value": f"{annual_hours_saved:,.2f} hours/year",
+            }
+        )
         if hours_per_switch_per_year is not None:
-            sanity_rows.append({
-                "Metric": "Hours saved per switch per year",
-                "Value": f"{hours_per_switch_per_year:.3f} hours/switch/year",
-            })
+            sanity_rows.append(
+                {
+                    "Metric": "Hours saved per switch per year",
+                    "Value": f"{hours_per_switch_per_year:.3f} hours/switch/year",
+                }
+            )
         if hours_per_site_per_year is not None:
-            sanity_rows.append({
-                "Metric": "Hours saved per site per year",
-                "Value": f"{hours_per_site_per_year:.3f} hours/site/year",
-            })
+            sanity_rows.append(
+                {
+                    "Metric": "Hours saved per site per year",
+                    "Value": f"{hours_per_site_per_year:.3f} hours/site/year",
+                }
+            )
         if benefit_per_switch_per_year is not None:
-            sanity_rows.append({
-                "Metric": "Total benefit per switch per year",
-                "Value": f"${benefit_per_switch_per_year:,.2f} USD/switch/year",
-            })
+            sanity_rows.append(
+                {
+                    "Metric": "Total benefit per switch per year",
+                    "Value": f"${benefit_per_switch_per_year:,.2f} USD/switch/year",
+                }
+            )
         if benefit_per_site_per_year is not None:
-            sanity_rows.append({
-                "Metric": "Total benefit per site per year",
-                "Value": f"${benefit_per_site_per_year:,.2f} USD/site/year",
-            })
+            sanity_rows.append(
+                {
+                    "Metric": "Total benefit per site per year",
+                    "Value": f"${benefit_per_site_per_year:,.2f} USD/site/year",
+                }
+            )
         if benefit_per_change is not None:
-            sanity_rows.append({
-                "Metric": "Total benefit per change",
-                "Value": f"${benefit_per_change:,.2f} USD/change",
-            })
+            sanity_rows.append(
+                {
+                    "Metric": "Total benefit per change",
+                    "Value": f"${benefit_per_change:,.2f} USD/change",
+                }
+            )
 
         st.table(sanity_rows)
-        st.caption("Gut-check these numbers to see if they feel realistic before sharing with CXOs or finance.")
+        st.caption(
+            "Gut-check these numbers to see if they feel realistic before sharing with CXOs or finance."
+        )
 
         # --- NABCD(E) Summary section ---
 
@@ -1434,12 +1573,18 @@ def main():
             nabcde_summary=nabcde_summary,
             acquisition_strategy=acquisition_strategy,
             cost_breakdown=cost_breakdown,
-            tech_debt_included=bool(include_tech_debt and (tech_debt_annual_after > 0 or tech_debt_remediation_one_time > 0)),
+            tech_debt_included=bool(
+                include_tech_debt
+                and (tech_debt_annual_after > 0 or tech_debt_remediation_one_time > 0)
+            ),
             tech_debt_reduction_pct=tech_reduction_pct,
             tech_debt_base_annual=tech_debt_base_annual,
             tech_debt_impact_pct=tech_debt_impact_pct,
             tech_debt_residual_pct=tech_debt_residual_pct,
-            csat_debt_included=bool(include_csat_debt and (csat_debt_annual_after > 0 or csat_debt_remediation_one_time > 0)),
+            csat_debt_included=bool(
+                include_csat_debt
+                and (csat_debt_annual_after > 0 or csat_debt_remediation_one_time > 0)
+            ),
             csat_debt_base_annual=csat_debt_base_annual,
             csat_debt_impact_pct=csat_debt_impact_pct,
             csat_debt_residual_pct=csat_debt_residual_pct,
@@ -1459,6 +1604,7 @@ def main():
         st.subheader("Save/Load Scenarios")
 
         tab_report, tab_compare = st.tabs(["Report & Scenario", "Compare Scenarios"])
+
         # Helper to assemble current scenario JSON
         def build_scenario_payload() -> Dict[str, Any]:
             return {
@@ -1515,9 +1661,9 @@ def main():
         scenario_json_str = json.dumps(build_scenario_payload(), indent=2)
 
         # Combined ZIP (Markdown + JSON) single button with shared timestamp
-        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.writestr(f"network_automation_business_case_{ts}.md", markdown_report)
             zf.writestr(f"scenario_{ts}.json", scenario_json_str)
         zip_bytes = zip_buffer.getvalue()
@@ -1529,7 +1675,9 @@ def main():
         )
 
         st.markdown("#### Build report from a saved scenario JSON")
-        uploaded_scenario = st.file_uploader("Upload 1 scenario JSON", type=["json"], key="scenario_one")
+        uploaded_scenario = st.file_uploader(
+            "Upload 1 scenario JSON", type=["json"], key="scenario_one"
+        )
         if uploaded_scenario is not None:
             try:
                 scenario_data = json.loads(uploaded_scenario.read().decode("utf-8"))
@@ -1537,26 +1685,54 @@ def main():
                 # Fallbacks handled with dict.get and sensible defaults
                 md_from_json = build_markdown_report(
                     years=int(scenario_data.get("years", 5)),
-                    automation_title=scenario_data.get("automation_title", "Network Automation"),
-                    automation_description=scenario_data.get("automation_description", ""),
-                    switches_per_location=float(scenario_data.get("switches_per_location", 0.0)),
+                    automation_title=scenario_data.get(
+                        "automation_title", "Network Automation"
+                    ),
+                    automation_description=scenario_data.get(
+                        "automation_description", ""
+                    ),
+                    switches_per_location=float(
+                        scenario_data.get("switches_per_location", 0.0)
+                    ),
                     num_locations=float(scenario_data.get("num_locations", 0.0)),
                     total_switches=float(scenario_data.get("total_switches", 0.0)),
                     tasks_per_year=float(scenario_data.get("tasks_per_year", 0.0)),
-                    automation_coverage_pct=float(scenario_data.get("automation_coverage_pct", 0.0)),
+                    automation_coverage_pct=float(
+                        scenario_data.get("automation_coverage_pct", 0.0)
+                    ),
                     hourly_rate=float(scenario_data.get("hourly_rate", 0.0)),
-                    manual_total_minutes=float(scenario_data.get("manual_total_minutes", 0.0)),
-                    auto_total_minutes=float(scenario_data.get("auto_total_minutes", 0.0)),
-                    minutes_saved_per_change=float(scenario_data.get("minutes_saved_per_change", 0.0)),
-                    annual_hours_saved=float(scenario_data.get("annual_hours_saved", 0.0)),
-                    annual_cost_savings=float(scenario_data.get("annual_cost_savings", 0.0)),
+                    manual_total_minutes=float(
+                        scenario_data.get("manual_total_minutes", 0.0)
+                    ),
+                    auto_total_minutes=float(
+                        scenario_data.get("auto_total_minutes", 0.0)
+                    ),
+                    minutes_saved_per_change=float(
+                        scenario_data.get("minutes_saved_per_change", 0.0)
+                    ),
+                    annual_hours_saved=float(
+                        scenario_data.get("annual_hours_saved", 0.0)
+                    ),
+                    annual_cost_savings=float(
+                        scenario_data.get("annual_cost_savings", 0.0)
+                    ),
                     benefits=scenario_data.get("benefits", []),
-                    annual_additional_benefits=float(scenario_data.get("annual_additional_benefits", 0.0)),
-                    annual_total_benefit=float(scenario_data.get("annual_total_benefit", 0.0)),
-                    annual_run_cost=float(scenario_data.get("annual_run_cost_effective", 0.0)),
-                    annual_net_benefit=float(scenario_data.get("annual_net_benefit", 0.0)),
+                    annual_additional_benefits=float(
+                        scenario_data.get("annual_additional_benefits", 0.0)
+                    ),
+                    annual_total_benefit=float(
+                        scenario_data.get("annual_total_benefit", 0.0)
+                    ),
+                    annual_run_cost=float(
+                        scenario_data.get("annual_run_cost_effective", 0.0)
+                    ),
+                    annual_net_benefit=float(
+                        scenario_data.get("annual_net_benefit", 0.0)
+                    ),
                     project_cost=float(scenario_data.get("project_cost", 0.0)),
-                    discount_rate_pct=float(scenario_data.get("discount_rate_pct", 10.0)),
+                    discount_rate_pct=float(
+                        scenario_data.get("discount_rate_pct", 10.0)
+                    ),
                     cash_flows=scenario_data.get("cash_flows", []),
                     npv=float(scenario_data.get("npv", 0.0)),
                     payback=scenario_data.get("payback", None),
@@ -1565,17 +1741,27 @@ def main():
                     cum_3=float(scenario_data.get("cum_3", 0.0)),
                     cum_5=float(scenario_data.get("cum_5", 0.0)),
                     nabcde_summary="Loaded from scenario JSON",
-                    acquisition_strategy=scenario_data.get("acquisition_strategy", "Buy tool(s)"),
+                    acquisition_strategy=scenario_data.get(
+                        "acquisition_strategy", "Buy tool(s)"
+                    ),
                     cost_breakdown=scenario_data.get("cost_breakdown", []),
-                    tech_debt_included=bool(scenario_data.get("include_tech_debt", False)),
+                    tech_debt_included=bool(
+                        scenario_data.get("include_tech_debt", False)
+                    ),
                     tech_debt_reduction_pct=(
-                        (100.0 - float(scenario_data.get("tech_debt_residual_pct", 100.0)))
-                        if scenario_data.get("tech_debt_residual_pct") is not None else None
+                        (
+                            100.0
+                            - float(scenario_data.get("tech_debt_residual_pct", 100.0))
+                        )
+                        if scenario_data.get("tech_debt_residual_pct") is not None
+                        else None
                     ),
                     tech_debt_base_annual=scenario_data.get("tech_debt_base_annual"),
                     tech_debt_impact_pct=scenario_data.get("tech_debt_impact_pct"),
                     tech_debt_residual_pct=scenario_data.get("tech_debt_residual_pct"),
-                    csat_debt_included=bool(scenario_data.get("include_csat_debt", False)),
+                    csat_debt_included=bool(
+                        scenario_data.get("include_csat_debt", False)
+                    ),
                     csat_debt_base_annual=scenario_data.get("csat_debt_base_annual"),
                     csat_debt_impact_pct=scenario_data.get("csat_debt_impact_pct"),
                     csat_debt_residual_pct=scenario_data.get("csat_debt_residual_pct"),
@@ -1593,37 +1779,57 @@ def main():
             st.markdown("#### Compare two scenarios (A vs B)")
             colA, colB = st.columns(2)
             with colA:
-                scenario_A = st.file_uploader("Scenario A JSON", type=["json"], key="scenarioA")
+                scenario_A = st.file_uploader(
+                    "Scenario A JSON", type=["json"], key="scenarioA"
+                )
             with colB:
-                scenario_B = st.file_uploader("Scenario B JSON", type=["json"], key="scenarioB")
+                scenario_B = st.file_uploader(
+                    "Scenario B JSON", type=["json"], key="scenarioB"
+                )
             if scenario_A is not None and scenario_B is not None:
                 try:
                     dataA = json.loads(scenario_A.read().decode("utf-8"))
                     dataB = json.loads(scenario_B.read().decode("utf-8"))
+
                     def val(d, k, default=0.0):
                         v = d.get(k, default)
                         try:
                             return float(v)
                         except Exception:
                             return default
+
                     rows = []
+
                     def add_row(name, key, fmt="${:,.2f}"):
                         a = val(dataA, key, 0.0)
                         b = val(dataB, key, 0.0)
                         delta = b - a
-                        rows.append({
-                            "Metric": name,
-                            "Scenario A": fmt.format(a) if isinstance(a, float) else a,
-                            "Scenario B": fmt.format(b) if isinstance(b, float) else b,
-                            "Delta (B−A)": fmt.format(delta) if isinstance(delta, float) else delta,
-                        })
+                        rows.append(
+                            {
+                                "Metric": name,
+                                "Scenario A": (
+                                    fmt.format(a) if isinstance(a, float) else a
+                                ),
+                                "Scenario B": (
+                                    fmt.format(b) if isinstance(b, float) else b
+                                ),
+                                "Delta (B−A)": (
+                                    fmt.format(delta)
+                                    if isinstance(delta, float)
+                                    else delta
+                                ),
+                            }
+                        )
+
                     # Key comparisons
-                    rows.append({
-                        "Metric": "Acquisition strategy",
-                        "Scenario A": dataA.get("acquisition_strategy", ""),
-                        "Scenario B": dataB.get("acquisition_strategy", ""),
-                        "Delta (B−A)": "",
-                    })
+                    rows.append(
+                        {
+                            "Metric": "Acquisition strategy",
+                            "Scenario A": dataA.get("acquisition_strategy", ""),
+                            "Scenario B": dataB.get("acquisition_strategy", ""),
+                            "Delta (B−A)": "",
+                        }
+                    )
                     add_row("Project cost (Y0)", "project_cost")
                     add_row("Annual run cost (effective)", "annual_run_cost_effective")
                     add_row("Annual total benefit", "annual_total_benefit")
@@ -1642,14 +1848,6 @@ def main():
         st.code(preview, language="markdown")
 
 
-
-
 # Standard call to the main() function.
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Script Description",
-                                     epilog="Usage: ' python chatgpt8-7.py' ")
-
-    # parser.add_argument('all', help='Execute all exercises in week 4 assignment')
-    # parser.add_argument('-a', '--all', help='Execute all exercises in week 4 assignment', action='store_true',default=False)
-    arguments = parser.parse_args()
+if __name__ == "__main__":
     main()
