@@ -9,7 +9,7 @@ st.set_page_config(page_title="Business Case Comparison", page_icon="images/EIA_
 st.title("Business Case Comparison")
 
 with st.sidebar:
-    st.image("images/EIA Logo FINAL small_Round.png", width=64)
+    st.image("images/EIA Logo FINAL small_Round.png")
 
 st.markdown(
     """

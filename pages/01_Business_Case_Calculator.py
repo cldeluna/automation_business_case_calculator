@@ -504,7 +504,7 @@ def main():
 
     # -------- Sidebar for volume, cost & additional benefits --------
     with st.sidebar:
-        st.image("images/EIA Logo FINAL small_Round.png", width=64)
+        st.image("images/EIA Logo FINAL small_Round.png")
         st.header("Volume & Cost Assumptions")
 
         switches_per_location = st.number_input(
