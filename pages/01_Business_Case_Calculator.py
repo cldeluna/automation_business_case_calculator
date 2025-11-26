@@ -1617,6 +1617,32 @@ def main():
                 """
             )
 
+        # --- Visualizations ---
+        st.markdown("---")
+        st.subheader("Visualizations")
+        c1, c2 = st.columns(2)
+        with c1:
+            with st.expander("Annual Benefits vs Costs", expanded=False):
+                fig1 = utils.fig_annual_benefits_vs_costs(
+                    years=years_list,
+                    annual_total_benefit=annual_total_benefit,
+                    annual_run_cost_effective=annual_run_cost_effective,
+                    project_cost=project_cost,
+                )
+                st.plotly_chart(fig1, use_container_width=True)
+        with c2:
+            with st.expander("Net Cash Flow per Year", expanded=False):
+                fig2 = utils.fig_net_cash_flow(cash_flows)
+                st.plotly_chart(fig2, use_container_width=True)
+
+        with st.expander("Cumulative Cash Flow (with Payback)", expanded=False):
+            fig3 = utils.fig_cumulative_cash_flow(cash_flows, payback)
+            st.plotly_chart(fig3, use_container_width=True)
+
+        with st.expander(f"Cash Flow Waterfall (Y0..Y{years_list})", expanded=False):
+            fig4 = utils.fig_waterfall(cash_flows)
+            st.plotly_chart(fig4, use_container_width=True)
+
         st.subheader("Cumulative Cash Flow Checkpoints")
         st.write(f"**After 1 year:** ${cum_1:,.2f} USD")
         st.write(f"**After 3 years:** ${cum_3:,.2f} USD")
@@ -1870,11 +1896,50 @@ def main():
 
         scenario_json_str = json.dumps(build_scenario_payload(), indent=2)
 
-        # Combined ZIP (Markdown + JSON) single button with shared timestamp
+        # Combined ZIP (Markdown + JSON + Images) single button with shared timestamp
+        # Build figures for export
+        fig1 = utils.fig_annual_benefits_vs_costs(
+            years=years_list,
+            annual_total_benefit=annual_total_benefit,
+            annual_run_cost_effective=annual_run_cost_effective,
+            project_cost=project_cost,
+        )
+        fig2 = utils.fig_net_cash_flow(cash_flows)
+        fig3 = utils.fig_cumulative_cash_flow(cash_flows, payback)
+        fig4 = utils.fig_waterfall(cash_flows)
+
+        # Try to render images; if fails (e.g., kaleido missing), skip images gracefully
+        images = []  # list of (filename, bytes, alt)
+        def try_add(name: str, fig):
+            try:
+                png = fig.to_image(format="png", scale=2)
+                images.append((name, png, name))
+            except Exception:
+                pass
+
+        try_add(f"Annual_Benefits_vs_Costs_{slug}_{ts}.png", fig1)
+        try_add(f"Net_Cash_Flow_{slug}_{ts}.png", fig2)
+        try_add(f"Cumulative_Cash_Flow_{slug}_{ts}.png", fig3)
+        try_add(f"Cash_Flow_Waterfall_{slug}_{ts}.png", fig4)
+
+        # Enhance markdown with image references (only for ZIP)
+        md_with_images_lines = [markdown_report]
+        if images:
+            md_with_images_lines.append("\n---\n\n## Visualizations\n")
+            for fname, _, alt in images:
+                md_with_images_lines.append(f"\n![{alt}]({fname})\n")
+        else:
+            md_with_images_lines.append(
+                "\n\n> Note: Visualizations could not be embedded due to a rendering dependency. Install 'kaleido' to enable PNG export.\n"
+            )
+        markdown_report_with_images = "".join(md_with_images_lines)
+
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(f"BusinessCaseReport_{slug}_{ts}.md", markdown_report)
+            zf.writestr(f"BusinessCaseReport_{slug}_{ts}.md", markdown_report_with_images)
             zf.writestr(f"BusinessCaseScenario_{slug}_{ts}.json", scenario_json_str)
+            for fname, data, _ in images:
+                zf.writestr(fname, data)
         zip_bytes = zip_buffer.getvalue()
         st.download_button(
             label="📄 Download report + 🗂️ JSON scenario (ZIP)",
@@ -1892,7 +1957,7 @@ def main():
             "Downloads are saved by your browser to its default download folder (e.g., 'Downloads').\n\n"
             f"Files created now:\n"
             f"- {md_name}\n"
-            f"- {zip_name} (contains {zip_md_name} and {zip_json_name})"
+            f"- {zip_name} (contains {zip_md_name}, {zip_json_name} and visualization PNGs if rendering succeeded)"
         )
 
         show_preview = False
