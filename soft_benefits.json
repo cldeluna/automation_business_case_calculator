@@ -1,0 +1,60 @@
+{
+  "categories": [
+    {
+      "name": "Relationship and Trust",
+      "details": [
+        "Increased trust in IT as a strategic partner rather than a cost center.",
+        "Business units come to IT earlier in their planning, giving IT a chance to shape solutions toward standards and reusable platforms.",
+        "Stakeholders perceive IT as reliable and transparent, making them more forgiving when something does go wrong."
+      ]
+    },
+    {
+      "name": "Demand and Alignment",
+      "details": [
+        "Internal customers are more likely to route new work, growth initiatives, and experiments through corporate IT instead of shadow IT.",
+        "Solutions are better aligned with architecture, security, and compliance standards, reducing rework, integration pain, and audit risk.",
+        "Portfolio conversations shift from ‘what can we cut’ to ‘how can IT help us grow or differentiate.’"
+      ]
+    },
+    {
+      "name": "Organizational Behavior",
+      "details": [
+        "Business sponsors are more willing to fund platform work, refactoring, and technical debt reduction because they see the payoff in smoother delivery.",
+        "Engagement in governance (architecture boards, CABs, steering committees) becomes more constructive and less adversarial.",
+        "Cross-functional teams communicate more openly, escalating risks earlier instead of hiding issues until they explode."
+      ]
+    },
+    {
+      "name": "Financial and Political Capital",
+      "details": [
+        "Stakeholders resent rate increases or chargeback adjustments less because they believe they are paying for value, not bureaucracy.",
+        "IT gains political capital to say ‘no’ to one-off exceptions and custom builds, and those ‘no’ decisions face less resistance.",
+        "Budget discussions become more about outcomes and service levels than line-item costs, giving IT more flexibility to optimize underneath."
+      ]
+    },
+    {
+      "name": "Culture and Talent",
+      "details": [
+        "Morale in both IT and the business improves as firefighting decreases and people feel proud of the services they rely on.",
+        "IT is seen as a destination team for high performers; leaders find it easier to recruit and retain good engineers and analysts.",
+        "A culture of continuous improvement takes root, with staff proposing enhancements because they believe they will be heard and acted on."
+      ]
+    },
+    {
+      "name": "Risk and Resilience",
+      "details": [
+        "Business stakeholders develop more confidence in IT’s ability to handle incidents, making crisis collaboration faster and less political.",
+        "There is greater willingness to adopt standardized, resilient patterns (e.g., reference architectures, golden images) because past experience has shown they work.",
+        "Executives sleep better knowing IT is less of a ‘single point of failure’ reputationally; this can subtly influence board-level support for IT strategy."
+      ]
+    },
+    {
+      "name": "Reputation and Influence",
+      "details": [
+        "IT’s internal ‘brand’ improves, which can spill over to external clients and partners when IT is involved in customer-facing solutions.",
+        "Leaders from IT are invited into more strategic conversations (M&A, new product lines, new geographies) earlier in the cycle.",
+        "Success stories about IT spread informally through the organization, reinforcing the perception that ‘going through IT’ is the smart move."
+      ]
+    }
+  ]
+}
