@@ -123,3 +123,63 @@ with st.expander("Checklist: Values you’ll need"):
             - Reputation and Influence
             """
     )
+
+with st.expander("How the calculations work"):
+    st.markdown(
+        """
+        The calculator turns your engineering inputs into business metrics. Here’s exactly how:
+
+        - **Tasks per year**  
+          `tasks_per_year = changes_per_month × 12`
+
+        - **Time saved per change (hours)**  
+          `hours_saved_per_change = (manual_total_minutes − auto_total_minutes) ÷ 60`
+
+        - **Effective automated changes/year**  
+          `effective_changes_per_year = tasks_per_year × (automation_coverage_% ÷ 100)`
+
+        - **Annual hours saved**  
+          `annual_hours_saved = hours_saved_per_change × effective_changes_per_year`
+
+        - **Annual cost savings (time)**  
+          `annual_cost_savings = annual_hours_saved × engineer_hourly_rate`
+
+        - **Additional benefits (optional)**  
+          Sum of any checked benefit categories.  
+          `annual_additional_benefits = Σ benefit_annual_value`
+
+        - **Total annual benefit**  
+          `annual_total_benefit = annual_cost_savings + annual_additional_benefits`
+
+        - **Annual run cost (effective)**  
+          Includes ongoing run cost plus optional debts (scaled by non‑automated scope).  
+          `annual_run_cost_effective = annual_run_cost + tech_debt_annual_after + csat_debt_annual_after`
+
+        - **Annual net benefit**  
+          `annual_net_benefit = annual_total_benefit − annual_run_cost_effective`
+
+        - **Project cost (Year 0)**  
+          One‑time Buy/Build cost, plus any one‑time remediation.  
+          `project_cost_effective = project_cost + tech_debt_remediation_one_time + csat_debt_remediation_one_time`
+
+        - **Cash flows (Year 0..N)**  
+          Year 0 is the investment (negative), followed by N years of annual net benefit.  
+          `cash_flows = [−project_cost_effective] + [annual_net_benefit] × years`
+
+        - **Net Present Value (NPV)**  
+          Uses your discount (hurdle) rate `r` to reflect time value of money.  
+          `NPV = Σ ( CF_t ÷ (1 + r)^t ), t = 0..years`
+
+        - **Payback period (undiscounted)**  
+          Years until cumulative cash ≥ 0; if it happens mid‑year, we interpolate a fraction.
+
+        - **Internal Rate of Return (IRR)**  
+          The discount rate where NPV = 0. If IRR > your discount rate, the project clears the financial bar.
+
+        - **Cumulative checkpoints (1/3/5 yrs)**  
+          Simple running totals to show progress recovering the initial investment.
+
+        - **Sign convention**  
+          Benefits are positive (returns). Costs are investments and appear as negative cash flows.
+        """
+    )

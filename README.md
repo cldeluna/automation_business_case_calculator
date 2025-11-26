@@ -144,6 +144,66 @@ Streamlit will open a browser tab. Use the sidebar or the home page links to nav
 - **Finance**
   - [ ] Discount rate / hurdle rate (%)
 
+<details>
+<summary><strong>How the calculations work</strong></summary>
+
+The calculator turns engineering inputs into business metrics. Here’s exactly how, in plain English:
+
+- <strong>Tasks per year</strong>  
+  <code>tasks_per_year = changes_per_month × 12</code>
+
+- <strong>Time saved per change (hours)</strong>  
+  <code>hours_saved_per_change = (manual_total_minutes − auto_total_minutes) ÷ 60</code>
+
+- <strong>Effective automated changes/year</strong>  
+  <code>effective_changes_per_year = tasks_per_year × (automation_coverage_% ÷ 100)</code>
+
+- <strong>Annual hours saved</strong>  
+  <code>annual_hours_saved = hours_saved_per_change × effective_changes_per_year</code>
+
+- <strong>Annual cost savings (time)</strong>  
+  <code>annual_cost_savings = annual_hours_saved × engineer_hourly_rate</code>
+
+- <strong>Additional benefits (optional)</strong>  
+  Sum of any checked benefit categories.  
+  <code>annual_additional_benefits = Σ benefit_annual_value</code>
+
+- <strong>Total annual benefit</strong>  
+  <code>annual_total_benefit = annual_cost_savings + annual_additional_benefits</code>
+
+- <strong>Annual run cost (effective)</strong>  
+  Includes ongoing run cost plus optional debts (scaled by non‑automated scope).  
+  <code>annual_run_cost_effective = annual_run_cost + tech_debt_annual_after + csat_debt_annual_after</code>
+
+- <strong>Annual net benefit</strong>  
+  <code>annual_net_benefit = annual_total_benefit − annual_run_cost_effective</code>
+
+- <strong>Project cost (Year 0)</strong>  
+  One‑time Buy/Build cost, plus any one‑time remediation.  
+  <code>project_cost_effective = project_cost + tech_debt_remediation_one_time + csat_debt_remediation_one_time</code>
+
+- <strong>Cash flows (Year 0..N)</strong>  
+  Year 0 is the investment (negative), followed by N years of annual net benefit.  
+  <code>cash_flows = [−project_cost_effective] + [annual_net_benefit] × years</code>
+
+- <strong>Net Present Value (NPV)</strong>  
+  Uses your discount (hurdle) rate <code>r</code> to reflect time value of money.  
+  <code>NPV = Σ ( CF_t ÷ (1 + r)^t ), t = 0..years</code>
+
+- <strong>Payback period (undiscounted)</strong>  
+  Years until cumulative cash ≥ 0; if it happens mid‑year, the model interpolates a fraction.
+
+- <strong>Internal Rate of Return (IRR)</strong>  
+  The discount rate where NPV = 0. If IRR > your discount rate, the project clears the financial bar.
+
+- <strong>Cumulative checkpoints (1/3/5 yrs)</strong>  
+  Simple running totals to show progress recovering the initial investment.
+
+- <strong>Sign convention</strong>  
+  Benefits are positive (returns). Costs are investments and appear as negative cash flows.
+
+</details>
+
 ## Change Workflow Anatomy (context)
 The calculator asks for minutes per step for both manual and automated workflows. This diagram illustrates the 8 steps used in the app:
 
