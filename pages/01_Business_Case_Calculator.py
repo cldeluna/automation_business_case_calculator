@@ -11,6 +11,9 @@ __copyright__ = "Copyright (c) 2025 Claudia"
 __license__ = "Python"
 
 
+import utils
+
+
 import streamlit as st
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -18,18 +21,20 @@ import json
 from io import BytesIO
 import zipfile
 
+
+
 # ---------- Financial helper functions ----------
 
 
-def compute_npv(discount_rate: float, cash_flows: List[float]) -> float:
-    """
-    Net Present Value.
-    cash_flows[0] is year 0 (today), cash_flows[1] is year 1, etc.
-    """
-    npv = 0.0
-    for t, cf in enumerate(cash_flows):
-        npv += cf / ((1 + discount_rate) ** t)
-    return npv
+# def compute_npv(discount_rate: float, cash_flows: List[float]) -> float:
+#     """
+#     Net Present Value.
+#     cash_flows[0] is year 0 (today), cash_flows[1] is year 1, etc.
+#     """
+#     npv = 0.0
+#     for t, cf in enumerate(cash_flows):
+#         npv += cf / ((1 + discount_rate) ** t)
+#     return npv
 
 
 def compute_payback_period(cash_flows: List[float]) -> Optional[float]:
@@ -62,7 +67,7 @@ def compute_irr(
     """
 
     def npv_at(rate: float) -> float:
-        return compute_npv(rate, cash_flows)
+        return utils.compute_npv(rate, cash_flows)
 
     npv_low = npv_at(guess_low)
     npv_high = npv_at(guess_high)
@@ -1240,7 +1245,7 @@ def main():
         for _ in range(years_list):
             cash_flows.append(annual_net_benefit)
 
-        npv = compute_npv(discount_rate, cash_flows)
+        npv = utils.compute_npv(discount_rate, cash_flows)
         payback = compute_payback_period(cash_flows)
         irr = compute_irr(cash_flows)
 
@@ -1603,7 +1608,7 @@ def main():
         st.markdown("---")
         st.subheader("Save/Load Scenarios")
 
-        tab_report, tab_compare = st.tabs(["Report & Scenario", "Compare Scenarios"])
+        # Removed comparison tabs; keeping report & scenario actions only
 
         # Helper to assemble current scenario JSON
         def build_scenario_payload() -> Dict[str, Any]:
@@ -1674,172 +1679,9 @@ def main():
             mime="application/zip",
         )
 
-        st.markdown("#### Build report from a saved scenario JSON")
-        uploaded_scenario = st.file_uploader(
-            "Upload 1 scenario JSON", type=["json"], key="scenario_one"
-        )
-        if uploaded_scenario is not None:
-            try:
-                scenario_data = json.loads(uploaded_scenario.read().decode("utf-8"))
-                # Attempt to build a report from JSON
-                # Fallbacks handled with dict.get and sensible defaults
-                md_from_json = build_markdown_report(
-                    years=int(scenario_data.get("years", 5)),
-                    automation_title=scenario_data.get(
-                        "automation_title", "Network Automation"
-                    ),
-                    automation_description=scenario_data.get(
-                        "automation_description", ""
-                    ),
-                    switches_per_location=float(
-                        scenario_data.get("switches_per_location", 0.0)
-                    ),
-                    num_locations=float(scenario_data.get("num_locations", 0.0)),
-                    total_switches=float(scenario_data.get("total_switches", 0.0)),
-                    tasks_per_year=float(scenario_data.get("tasks_per_year", 0.0)),
-                    automation_coverage_pct=float(
-                        scenario_data.get("automation_coverage_pct", 0.0)
-                    ),
-                    hourly_rate=float(scenario_data.get("hourly_rate", 0.0)),
-                    manual_total_minutes=float(
-                        scenario_data.get("manual_total_minutes", 0.0)
-                    ),
-                    auto_total_minutes=float(
-                        scenario_data.get("auto_total_minutes", 0.0)
-                    ),
-                    minutes_saved_per_change=float(
-                        scenario_data.get("minutes_saved_per_change", 0.0)
-                    ),
-                    annual_hours_saved=float(
-                        scenario_data.get("annual_hours_saved", 0.0)
-                    ),
-                    annual_cost_savings=float(
-                        scenario_data.get("annual_cost_savings", 0.0)
-                    ),
-                    benefits=scenario_data.get("benefits", []),
-                    annual_additional_benefits=float(
-                        scenario_data.get("annual_additional_benefits", 0.0)
-                    ),
-                    annual_total_benefit=float(
-                        scenario_data.get("annual_total_benefit", 0.0)
-                    ),
-                    annual_run_cost=float(
-                        scenario_data.get("annual_run_cost_effective", 0.0)
-                    ),
-                    annual_net_benefit=float(
-                        scenario_data.get("annual_net_benefit", 0.0)
-                    ),
-                    project_cost=float(scenario_data.get("project_cost", 0.0)),
-                    discount_rate_pct=float(
-                        scenario_data.get("discount_rate_pct", 10.0)
-                    ),
-                    cash_flows=scenario_data.get("cash_flows", []),
-                    npv=float(scenario_data.get("npv", 0.0)),
-                    payback=scenario_data.get("payback", None),
-                    irr=scenario_data.get("irr", None),
-                    cum_1=float(scenario_data.get("cum_1", 0.0)),
-                    cum_3=float(scenario_data.get("cum_3", 0.0)),
-                    cum_5=float(scenario_data.get("cum_5", 0.0)),
-                    nabcde_summary="Loaded from scenario JSON",
-                    acquisition_strategy=scenario_data.get(
-                        "acquisition_strategy", "Buy tool(s)"
-                    ),
-                    cost_breakdown=scenario_data.get("cost_breakdown", []),
-                    tech_debt_included=bool(
-                        scenario_data.get("include_tech_debt", False)
-                    ),
-                    tech_debt_reduction_pct=(
-                        (
-                            100.0
-                            - float(scenario_data.get("tech_debt_residual_pct", 100.0))
-                        )
-                        if scenario_data.get("tech_debt_residual_pct") is not None
-                        else None
-                    ),
-                    tech_debt_base_annual=scenario_data.get("tech_debt_base_annual"),
-                    tech_debt_impact_pct=scenario_data.get("tech_debt_impact_pct"),
-                    tech_debt_residual_pct=scenario_data.get("tech_debt_residual_pct"),
-                    csat_debt_included=bool(
-                        scenario_data.get("include_csat_debt", False)
-                    ),
-                    csat_debt_base_annual=scenario_data.get("csat_debt_base_annual"),
-                    csat_debt_impact_pct=scenario_data.get("csat_debt_impact_pct"),
-                    csat_debt_residual_pct=scenario_data.get("csat_debt_residual_pct"),
-                )
-                st.download_button(
-                    label="📥 Download Markdown built from uploaded scenario",
-                    data=md_from_json,
-                    file_name="scenario_report.md",
-                    mime="text/markdown",
-                )
-            except Exception as e:
-                st.error(f"Failed to build report from JSON: {e}")
+        # Removed 'Build report from a saved scenario JSON' section per request
 
-        with tab_compare:
-            st.markdown("#### Compare two scenarios (A vs B)")
-            colA, colB = st.columns(2)
-            with colA:
-                scenario_A = st.file_uploader(
-                    "Scenario A JSON", type=["json"], key="scenarioA"
-                )
-            with colB:
-                scenario_B = st.file_uploader(
-                    "Scenario B JSON", type=["json"], key="scenarioB"
-                )
-            if scenario_A is not None and scenario_B is not None:
-                try:
-                    dataA = json.loads(scenario_A.read().decode("utf-8"))
-                    dataB = json.loads(scenario_B.read().decode("utf-8"))
-
-                    def val(d, k, default=0.0):
-                        v = d.get(k, default)
-                        try:
-                            return float(v)
-                        except Exception:
-                            return default
-
-                    rows = []
-
-                    def add_row(name, key, fmt="${:,.2f}"):
-                        a = val(dataA, key, 0.0)
-                        b = val(dataB, key, 0.0)
-                        delta = b - a
-                        rows.append(
-                            {
-                                "Metric": name,
-                                "Scenario A": (
-                                    fmt.format(a) if isinstance(a, float) else a
-                                ),
-                                "Scenario B": (
-                                    fmt.format(b) if isinstance(b, float) else b
-                                ),
-                                "Delta (B−A)": (
-                                    fmt.format(delta)
-                                    if isinstance(delta, float)
-                                    else delta
-                                ),
-                            }
-                        )
-
-                    # Key comparisons
-                    rows.append(
-                        {
-                            "Metric": "Acquisition strategy",
-                            "Scenario A": dataA.get("acquisition_strategy", ""),
-                            "Scenario B": dataB.get("acquisition_strategy", ""),
-                            "Delta (B−A)": "",
-                        }
-                    )
-                    add_row("Project cost (Y0)", "project_cost")
-                    add_row("Annual run cost (effective)", "annual_run_cost_effective")
-                    add_row("Annual total benefit", "annual_total_benefit")
-                    add_row("Annual net benefit", "annual_net_benefit")
-                    add_row("NPV", "npv")
-                    add_row("IRR (%)", "irr", fmt="{:,.2%}")
-                    add_row("Payback (years)", "payback", fmt="{:,.2f}")
-                    st.table(rows)
-                except Exception as e:
-                    st.error(f"Failed to compare scenarios: {e}")
+        # Comparison section removed per request
 
         # Show a preview (truncated if long)
         preview = markdown_report[:1500]

@@ -1,16 +1,23 @@
-#!/usr/bin/env python3
-"""
-Utility helpers for the Automation Business Case app.
+#!/usr/bin/python3 -tt
+# Project: automation_business_case_calculator
+# Filename: utils.py
+# claudiadeluna
+# PyCharm
 
-Phase 1: financial helpers migrated from the single-file app so that
-pages can import from utils and we can continue refactoring incrementally.
-"""
-from __future__ import annotations
+__author__ = "Claudia de Luna (claudia@indigowire.net)"
+__version__ = ": 1.0 $"
+__date__ = "11/25/25"
+__copyright__ = "Copyright (c) 2025 Claudia"
+__license__ = "Python"
+
+
+# from __future__ import annotations
 
 from typing import List, Optional
 
 
 # ---------- Financial helper functions ----------
+
 
 def compute_npv(discount_rate: float, cash_flows: List[float]) -> float:
     """Net Present Value.
@@ -51,6 +58,7 @@ def compute_irr(
     """Very simple IRR using binary search.
     Returns r such that NPV(r) ~= 0, or None if no solution exists.
     """
+
     def npv_at(rate: float) -> float:
         return compute_npv(rate, cash_flows)
 
@@ -74,3 +82,18 @@ def compute_irr(
             npv_low = npv_mid
 
     return (guess_low + guess_high) / 2
+
+
+def main():
+    """
+    Utility helpers for the Automation Business Case app.
+
+    Phase 1: financial helpers migrated from the single-file app so that
+    pages can import from utils and we can continue refactoring incrementally.
+    """
+    pass
+
+
+# Standard call to the main() function.
+if __name__ == "__main__":
+    main()

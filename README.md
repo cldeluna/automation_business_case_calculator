@@ -98,6 +98,52 @@ Streamlit will open a browser tab. Use the sidebar or the home page links to nav
 - 🧮 Business Case Calculator
 - 📊 Business Case Comparison
 
+## Checklist: Values you’ll need
+- **Initiative basics**
+  - [ ] Title
+  - [ ] Short description/scope
+- **Volume & cost assumptions**
+  - [ ] Switches per location (avg)
+  - [ ] Number of locations (or total devices)
+  - [ ] Changes per month for this change type
+  - [ ] Percent of these changes automated (%)
+  - [ ] Engineer fully-loaded cost (USD/hour)
+- **Acquisition strategy (choose one)**
+  - Buy tool(s)
+    - [ ] One-time: license(s)
+    - [ ] One-time: integration/implementation
+    - [ ] One-time: training
+    - [ ] Annual: ongoing support & maintenance
+  - Build in-house
+    - [ ] One-time: development effort
+    - [ ] One-time: staff opportunity cost
+    - [ ] One-time: training
+    - [ ] Annual: ongoing support & maintenance
+- **Debts & Risk (optional; applied to non-automated scope)**
+  - Technical Debt
+    - [ ] Annual cost at 100% impact (USD/year)
+    - [ ] One-time remediation cost (optional)
+    - [ ] Residual technical debt after remediation (%)
+  - CSAT Debt
+    - [ ] Annual cost at 100% impact (USD/year)
+    - [ ] One-time remediation cost (optional)
+    - [ ] Residual CSAT debt after remediation (%)
+- **Manual vs Automated time per change (minutes per step)**
+  - [ ] Obtain change details (intent, devices)
+  - [ ] Develop command payload
+  - [ ] Quantify impact
+  - [ ] Change management, scheduling, notifications
+  - [ ] Current state analysis and verification
+  - [ ] Execute change
+  - [ ] Test and verification QA
+  - [ ] Documentation, notification, close out
+- **Additional Benefits (optional; per checked category)**
+  - [ ] Annual value (USD/year)
+  - [ ] Methodology (how estimated)
+  - [ ] Typical values/assumptions
+- **Finance**
+  - [ ] Discount rate / hurdle rate (%)
+
 ## Using the Business Case Calculator
 1. **Initiative details**
    - Title and short description/scope.
