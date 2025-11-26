@@ -510,6 +510,37 @@ def main():
 
     st.title("Network Automation Business Case Calculator")
 
+    # ---- Scenario loader (optional) ----
+    def sv(key: str, default: Any):
+        d = st.session_state.get("loaded_scenario")
+        if isinstance(d, dict):
+            return d.get(key, default)
+        return default
+
+    def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
+        d = st.session_state.get("loaded_scenario")
+        if not isinstance(d, dict):
+            return None
+        for b in d.get("benefits", []) or []:
+            if str(b.get("category", "")).strip().lower() == category.strip().lower():
+                return b
+        return None
+
+    with st.expander("Load a saved scenario (JSON)", expanded=False):
+        enable_load = st.checkbox("Load scenario JSON", value=False, key="load_scn_toggle")
+        if enable_load:
+            up = st.file_uploader("Upload scenario JSON", type=["json"], key="scenario_upload")
+            if up is not None:
+                try:
+                    data = json.loads(up.read().decode("utf-8"))
+                    if isinstance(data, dict):
+                        st.session_state["loaded_scenario"] = data
+                        st.success("Scenario loaded. Fields below will use values from the scenario where available.")
+                    else:
+                        st.warning("Uploaded JSON is not an object; ignoring.")
+                except Exception as e:
+                    st.error(f"Failed to parse scenario JSON: {e}")
+
     # ---- High-level automation info (title, description) ----
     st.subheader("Automation Initiative Details")
 
@@ -522,28 +553,28 @@ def main():
 
     automation_title = st.text_input(
         "Automation initiative title",
-        value="Access VLAN Change Automation",
+        value=sv("automation_title", "Access VLAN Change Automation"),
         help="Example: 'Access VLAN Change Automation', 'Firewall Rule Deployment Automation', etc.",
     )
 
     automation_description = st.text_area(
         "Short description / scope",
-        value=(
-            "Automation of access VLAN change workflows across the campus and branch network, "
-            "including config generation, deployment, and validation."
+        value=sv(
+            "automation_description",
+            "Automation of access VLAN change workflows across the campus and branch network, including config generation, deployment, and validation.",
         ),
         help="One or two sentences describing what this automation will do and where.",
     )
 
     solution_details_md = st.text_area(
         "Detailed solution description (Markdown supported)",
-        value="",
+        value=sv("solution_details_md", ""),
         help="Provide a longer-form description of the approach, components, workflow, and assumptions. You can use Markdown for formatting.",
     )
 
     out_of_scope = st.text_area(
         "Out of scope / not automated (Markdown supported)",
-        value="",
+        value=sv("out_of_scope", ""),
         help="List anything intentionally excluded or not automated in this solution. Markdown is supported.",
     )
 
@@ -563,7 +594,7 @@ def main():
             switches_per_location = st.number_input(
             "Number of switches per location",
             min_value=0,
-            value=10,
+            value=int(sv("switches_per_location", 10)),
             step=1,
             help="This can be an average number of network switches (L2 and L3) "
             "or network devices per location.",
@@ -573,7 +604,7 @@ def main():
             num_locations = st.number_input(
                 "Number of locations",
                 min_value=0,
-                value=250,
+                value=int(sv("num_locations", 250)),
                 step=10,
                 help="This can be an estimated number of locations which will be impacted "
                 "by this operational improvement.",
@@ -590,7 +621,7 @@ def main():
             tasks_per_month = st.number_input(
                 "Changes per month (this type of change across the network)",
                 min_value=0.0,
-                value=5.0,  # default per your assumption
+                value=float((sv("tasks_per_year", None) or 60.0) / 12.0),
                 step=1.0,
             )
         tasks_per_year = tasks_per_month * 12
@@ -600,7 +631,7 @@ def main():
                 "Percent of these changes automated (%)",
                 min_value=0.0,
                 max_value=100.0,
-                value=80.0,
+                value=float(sv("automation_coverage_pct", 80.0)),
                 step=5.0,
             )
 
@@ -608,7 +639,7 @@ def main():
             hourly_rate = st.number_input(
             "Engineer fully-loaded cost (USD/hour)",
             min_value=0.0,
-            value=75.0,
+            value=float(sv("hourly_rate", 75.0)),
             step=5.0,
             )
 
@@ -616,7 +647,7 @@ def main():
             discount_rate_pct = st.number_input(
             "Discount rate / hurdle rate (%)",
             min_value=0.0,
-            value=10.0,
+            value=float(sv("discount_rate_pct", 10.0)),
             step=1.0,
             help=(
                 "The required annual return used to discount future cash flows (time value of money). "
@@ -630,10 +661,12 @@ def main():
         with _acq:
             st.subheader("Acquisition Strategy")
             st.caption("All amounts below are COSTS (expenses), in USD.")
+            _default_acq = sv("acquisition_strategy", "Build in-house")
+            _default_index = 0 if str(_default_acq).lower().startswith("buy") else 1
             acquisition_strategy = st.radio(
                 "Will you buy a tool or build in-house?",
                 options=["Buy tool(s)", "Build in-house" ],
-                index=1,
+                index=_default_index,
                 help=(
                     "Buy: pay vendor license(s) and integrate.\n"
                     "Build: develop internally; includes engineering time and opportunity cost."
@@ -804,7 +837,7 @@ def main():
             )
             include_tech_debt = st.checkbox(
             "Include technical debt as an additional annual cost",
-            value=False,
+            value=bool(sv("include_tech_debt", False)),
             help=(
                 "Annual technical debt cost is scaled by (1 − automation%). "
                 "Example: at 80% automation, 20% impact applies."
@@ -821,7 +854,7 @@ def main():
             base_tech_debt_annual = _debts.number_input(
                 "Technical debt annual cost at 100% impact (USD/year)",
                 min_value=0.0,
-                value=20000.0,
+                value=float(sv("tech_debt_base_annual", 20000.0)),
                 step=1000.0,
             )
             impact_pct = max(0.0, 1.0 - (automation_coverage_pct / 100.0))
@@ -834,7 +867,7 @@ def main():
 
             include_remediation = _debts.checkbox(
                 "This automation includes technical debt remediation",
-                value=False,
+                value=bool(sv("tech_debt_remediation_one_time", 0.0) > 0 or sv("tech_debt_residual_pct", None) is not None),
                 help=(
                     "Adds a one-time remediation cost in Year 0 and optionally reduces the ongoing annual technical debt."
                 ),
@@ -844,14 +877,14 @@ def main():
                 tech_debt_remediation_one_time = _debts.number_input(
                     "One-time remediation cost (USD)",
                     min_value=0.0,
-                    value=10000.0,
+                    value=float(sv("tech_debt_remediation_one_time", 10000.0)),
                     step=1000.0,
                 )
                 residual_pct = _debts.number_input(
                     "Residual technical debt after remediation (%)",
                     min_value=0.0,
                     max_value=100.0,
-                    value=0.0,
+                    value=float(sv("tech_debt_residual_pct", 0.0)),
                     step=5.0,
                     help="Percent of the technical debt that remains annually after remediation (0% = fully remediated).",
                 )
@@ -880,7 +913,7 @@ def main():
         # CSAT debt (Optional) – modeled similarly, scaled by non-automated portion
         include_csat_debt = _debts.checkbox(
             "Include CSAT (customer satisfaction) debt as an additional annual cost",
-            value=False,
+            value=bool(sv("include_csat_debt", False)),
             help=(
                 "Annual CSAT debt cost is scaled by (1 − automation%). "
                 "Represents churn risk, service credits, extra support load."
@@ -896,7 +929,7 @@ def main():
             base_csat_debt_annual = _debts.number_input(
                 "CSAT debt annual cost at 100% impact (USD/year)",
                 min_value=0.0,
-                value=15000.0,
+                value=float(sv("csat_debt_base_annual", 15000.0)),
                 step=1000.0,
             )
             impact_pct = max(0.0, 1.0 - (automation_coverage_pct / 100.0))
@@ -909,7 +942,7 @@ def main():
 
             include_csat_remediation = _debts.checkbox(
                 "This automation includes CSAT debt remediation",
-                value=False,
+                value=bool(sv("csat_debt_remediation_one_time", 0.0) > 0 or sv("csat_debt_residual_pct", None) is not None),
                 help=(
                     "Adds a one-time CSAT remediation cost in Year 0 and optionally reduces the ongoing annual CSAT debt."
                 ),
@@ -919,14 +952,14 @@ def main():
                 csat_debt_remediation_one_time = _debts.number_input(
                     "CSAT remediation cost (one-time USD)",
                     min_value=0.0,
-                    value=5000.0,
+                    value=float(sv("csat_debt_remediation_one_time", 5000.0)),
                     step=1000.0,
                 )
                 csat_residual_pct = _debts.number_input(
                     "Residual CSAT debt after remediation (%)",
                     min_value=0.0,
                     max_value=100.0,
-                    value=20.0,
+                    value=float(sv("csat_debt_residual_pct", 20.0)),
                     step=5.0,
                     help="Percent of the CSAT debt that remains annually after remediation.",
                 )
@@ -1017,13 +1050,14 @@ def main():
         benefit_inputs: List[Dict[str, Any]] = []
 
         for label, key in BENEFIT_CATEGORIES:
-            include = _ben.checkbox(label, value=False, key=f"{key}_include")
+            pre_b = benefit_by_category(label)
+            include = _ben.checkbox(label, value=bool(pre_b is not None), key=f"{key}_include")
             if include:
                 _ben.markdown(f"**{label}**")
 
                 name = _ben.text_input(
                     f"{label} – Benefit name",
-                    value=label,
+                    value=(pre_b.get("name") if pre_b else label),
                     key=f"{key}_name",
                     help="Short, clear description (e.g., 'Faster upsell of managed LAN deals').",
                 )
@@ -1041,28 +1075,28 @@ def main():
                     manual_days = _ben.number_input(
                         f"{label} – Manual duration (days)",
                         min_value=0.0,
-                        value=5.0,
+                        value=float(pre_b.get("manual_days", 5.0)) if pre_b else 5.0,
                         step=0.5,
                         key=f"{key}_manual_days",
                     )
                     auto_days = _ben.number_input(
                         f"{label} – Automated duration (days)",
                         min_value=0.0,
-                        value=1.0,
+                        value=float(pre_b.get("auto_days", 1.0)) if pre_b else 1.0,
                         step=0.5,
                         key=f"{key}_auto_days",
                     )
                     sites_per_year = _ben.number_input(
                         f"{label} – Sites/projects per year impacted",
                         min_value=0.0,
-                        value=12.0,
+                        value=float(pre_b.get("sites_per_year", 12.0)) if pre_b else 12.0,
                         step=1.0,
                         key=f"{key}_sites_per_year",
                     )
                     value_per_site_day = _ben.number_input(
                         f"{label} – Business value per site per day (USD)",
                         min_value=0.0,
-                        value=1000.0,
+                        value=float(pre_b.get("value_per_site_day", 1000.0)) if pre_b else 1000.0,
                         step=500.0,
                         key=f"{key}_value_per_day",
                         help="Rough value of a site being 'fully live' per day "
@@ -1091,7 +1125,8 @@ def main():
                     )
 
                 annual_value_default = (
-                    float(suggested_value) if suggested_value is not None else 0.0
+                    float(pre_b.get("annual_value")) if pre_b and pre_b.get("annual_value") is not None
+                    else (float(suggested_value) if suggested_value is not None else 0.0)
                 )
 
                 annual_value = _ben.number_input(
@@ -1110,6 +1145,7 @@ def main():
                         "Example: 'Assume VLAN rollout at 12 sites/year; manual 5 days vs automation 1 day, "
                         "4 days saved × $1,000/day × 12 sites/year'."
                     ),
+                    value=(pre_b.get("methodology", "") if pre_b else ""),
                 )
 
                 if label in ("Revenue Acceleration", "Deployment Speed"):
@@ -1119,6 +1155,7 @@ def main():
                         f"{label} – Typical values / assumptions",
                         key=f"{key}_typical",
                         help="Key assumptions or typical values you used so finance can sanity-check.",
+                        value=(pre_b.get("typical", "") if pre_b else ""),
                     )
 
                 benefit_inputs.append(
@@ -1155,9 +1192,18 @@ def main():
             with open("soft_benefits.json", "r", encoding="utf-8") as f:
                 soft_data = json.load(f)
             categories = soft_data.get("categories", [])
+            loaded_soft = set()
+            try:
+                for sb in (st.session_state.get("loaded_scenario", {}) or {}).get("soft_benefits", []) or []:
+                    nm = str(sb.get("name", "")).strip()
+                    if nm:
+                        loaded_soft.add(nm.lower())
+            except Exception:
+                loaded_soft = set()
             for idx, cat in enumerate(categories):
+                nm = cat.get("name", f"Category {idx+1}")
                 checked = _soft.checkbox(
-                    cat.get("name", f"Category {idx+1}"), key=f"soft_ben_{idx}"
+                    nm, key=f"soft_ben_{idx}", value=(nm.strip().lower() in loaded_soft)
                 )
                 if checked:
                     soft_benefits_selected.append(
