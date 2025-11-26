@@ -496,6 +496,7 @@ BENEFIT_CATEGORIES = [
     ("Time-to-Market", "ttm"),
     ("Competitive Advantage", "competitive"),
     ("Employee Retention", "retention"),
+    ("Reduced 3rd party support spend", "thirdparty_support"),
     ("Other", "other"),
 ]
 
@@ -1743,10 +1744,16 @@ def main():
         st.markdown("---")
         st.subheader("⬇️ Downloads")
         st.markdown("**📄 Download Markdown Report Only**")
+
+        # Slug is derived from acquisition strategy only (no user input)
+        _is_buy = (acquisition_strategy or "").lower().startswith("buy")
+        slug = "Buy" if _is_buy else "Build"
+
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.download_button(
             label="📄 Download business case as Markdown",
             data=markdown_report,
-            file_name="network_automation_business_case.md",
+            file_name=f"BusinessCaseReport_{slug}_{ts}.md",
             mime="text/markdown",
         )
 
@@ -1816,17 +1823,28 @@ def main():
         scenario_json_str = json.dumps(build_scenario_payload(), indent=2)
 
         # Combined ZIP (Markdown + JSON) single button with shared timestamp
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(f"network_automation_business_case_{ts}.md", markdown_report)
-            zf.writestr(f"scenario_{ts}.json", scenario_json_str)
+            zf.writestr(f"BusinessCaseReport_{slug}_{ts}.md", markdown_report)
+            zf.writestr(f"BusinessCaseScenario_{slug}_{ts}.json", scenario_json_str)
         zip_bytes = zip_buffer.getvalue()
         st.download_button(
             label="📄 Download report + 🗂️ JSON scenario (ZIP)",
             data=zip_bytes,
-            file_name=f"automation_business_case_{ts}.zip",
+            file_name=f"BusinessCaseArtifacts_{slug}_{ts}.zip",
             mime="application/zip",
+        )
+
+        # Inform user where files are saved and list filenames
+        md_name = f"BusinessCaseReport_{slug}_{ts}.md"
+        zip_name = f"BusinessCaseArtifacts_{slug}_{ts}.zip"
+        zip_md_name = f"BusinessCaseReport_{slug}_{ts}.md"
+        zip_json_name = f"BusinessCaseScenario_{slug}_{ts}.json"
+        st.info(
+            "Downloads are saved by your browser to its default download folder (e.g., 'Downloads').\n\n"
+            f"Files created now:\n"
+            f"- {md_name}\n"
+            f"- {zip_name} (contains {zip_md_name} and {zip_json_name})"
         )
 
         show_preview = False
