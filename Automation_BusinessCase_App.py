@@ -88,7 +88,7 @@ with st.expander("Checklist: Values you’ll need"):
             - [ ] Annual cost at 100% impact (USD/year)
             - [ ] One-time remediation cost (optional)
             - [ ] Residual technical debt after remediation (%)
-          - CSAT Debt
+          - Customer Satisfaction (CSAT) Debt
             - [ ] Annual cost at 100% impact (USD/year)
             - [ ] One-time remediation cost (optional)
             - [ ] Residual CSAT debt after remediation (%)
@@ -104,7 +104,17 @@ with st.expander("Checklist: Values you’ll need"):
         - **Additional Benefits (optional; per checked category)**
           - [ ] Annual value (USD/year)
           - [ ] Methodology (how estimated)
-          - [ ] Typical values/assumptions
+        - **Benefit categories you can include to offset costs**
+          - Revenue Acceleration
+          - Customer Satisfaction / Net Promoter Score (NPS)
+          - Deployment Speed
+          - Compliance / Audit Savings
+          - Security Risk Reduction
+          - Time-to-Market
+          - Competitive Advantage
+          - Employee Retention
+          - Reduced 3rd party support spend
+          - Other
         - **Finance**
           - [ ] Discount rate / hurdle rate (%)
         """
