@@ -154,6 +154,19 @@ The calculator asks for minutes per step for both manual and automated workflows
   <br/>
 </p>
 
+## Intangible / Soft Benefits (context)
+Some outcomes are hard to price precisely but still matter for funding and prioritization. In the app’s sidebar you can select relevant categories (not monetized by default), such as:
+
+- Relationship and Trust
+- Demand and Alignment
+- Organizational Behavior
+- Financial and Political Capital
+- Culture and Talent
+- Risk and Resilience
+- Reputation and Influence
+
+Selected items appear in the web output and are included in the Markdown report and scenario JSON.
+
 ## Using the Business Case Calculator
 1. **Initiative details**
    - Title and short description/scope.

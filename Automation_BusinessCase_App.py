@@ -109,3 +109,17 @@ with st.expander("Checklist: Values you’ll need"):
           - [ ] Discount rate / hurdle rate (%)
         """
     )
+    st.markdown(
+        """
+            ---
+            ### Intangible / Soft Benefits (context)
+            Some outcomes are hard to price precisely but still matter for funding and prioritization. In the calculator’s sidebar you can select relevant categories (not monetized by default), such as:
+            - Relationship and Trust
+            - Demand and Alignment
+            - Organizational Behavior
+            - Financial and Political Capital
+            - Culture and Talent
+            - Risk and Resilience
+            - Reputation and Influence
+            """
+    )

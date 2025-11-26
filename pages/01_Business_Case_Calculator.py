@@ -13,7 +13,6 @@ __license__ = "Python"
 
 import utils
 
-
 import streamlit as st
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -160,6 +159,8 @@ def build_markdown_report(
     years: int,
     automation_title: str,
     automation_description: str,
+    solution_details_md: str,
+    out_of_scope: str,
     switches_per_location: float,
     num_locations: float,
     total_switches: float,
@@ -239,6 +240,18 @@ def build_markdown_report(
         else ""
     )
 
+    # Optional long-form sections (Markdown supported)
+    solution_details_block = (
+        f"\n\n## Detailed Solution Description\n\n{solution_details_md.strip()}\n"
+        if solution_details_md.strip()
+        else ""
+    )
+    out_of_scope_block = (
+        f"\n\n## Out of Scope / Not Automated\n\n{out_of_scope.strip()}\n"
+        if out_of_scope.strip()
+        else ""
+    )
+
     # Build detailed benefit lines
     if benefits:
         benefit_lines = []
@@ -315,6 +328,23 @@ def build_markdown_report(
         approach_intro = "Implement in-house automation that handles the repetitive parts of the workflow:"
         annual_run_label = "support/maintenance"
 
+    # Build optional Intangible/Soft Benefits section in the report if provided
+    soft_benefits_section = ""
+    try:
+        if soft_benefits_selected:
+            lines = [
+                "## Intangible / Soft Benefits",
+                "These qualitative impacts strengthen the narrative and stakeholder confidence. While not directly modeled in cash flows, they often influence funding, prioritization, and long‑term success:",
+            ]
+            for sb in soft_benefits_selected:
+                lines.append(f"\n### {sb.get('name','')}")
+                details = sb.get("details", [])
+                for d in details:
+                    lines.append(f"- {d}")
+            soft_benefits_section = "\n" + "\n".join(lines) + "\n"
+    except Exception:
+        soft_benefits_section = ""
+
     report = f"""# {title} – Network Automation Business Case
 
 ## NABCD(E) One-Page Summary
@@ -331,7 +361,7 @@ def build_markdown_report(
 - **Engineer fully-loaded cost:** ${hourly_rate:,.2f} USD/hour
  - **Acquisition strategy:** {acquisition_strategy}
 
-{scope_lines}{desc_block}
+{scope_lines}{desc_block}{solution_details_block}{out_of_scope_block}
 ## Need
 
 Manual change handling for this activity is consuming significant engineer time and slowing delivery:
@@ -379,8 +409,11 @@ Assumptions:
 {benefits_block}
 
 - **Total of additional benefits:** ${annual_additional_benefits:,.2f} USD/year  
+- **Total annual benefit (time + additional):** ${annual_total_benefit:,.2f} USD/year  
 
-**Total annual benefit (time + additional):** ${annual_total_benefit:,.2f} USD/year  
+#### Totals (Sign Convention)
+- Benefits are shown as positive amounts (returns / pluses).
+- Costs are treated as investments and appear as negative cash flows (see Cost Modeling and Cash Flows sections).  
 
 ### Net Benefit After Run Costs
 
@@ -450,6 +483,7 @@ Applied automation coverage: {automation_coverage_pct:.1f}% → debt impact appl
 - Built-in repeatability and compliance: automation enforces standard patterns.  
 - Reduced human error lowers outage risk and rework.  
 - Clear audit trail for changes (via ITSM and automation logs).  
+{soft_benefits_section}
 
 ## Exit / Ask
 
@@ -490,6 +524,13 @@ def main():
     # ---- High-level automation info (title, description) ----
     st.subheader("Automation Initiative Details")
 
+    st.write(
+        "Enter the things you already know as a network engineer "
+        "(how often, how long, plus optional benefits). "
+        "The app converts that into business metrics (NPV, IRR, payback), "
+        "a NABCD(E) summary, and a Markdown report you can share with CXOs."
+    )
+
     automation_title = st.text_input(
         "Automation initiative title",
         value="Access VLAN Change Automation",
@@ -505,19 +546,28 @@ def main():
         help="One or two sentences describing what this automation will do and where.",
     )
 
-    st.write(
-        "Enter the things you already know as a network engineer "
-        "(how often, how long, plus optional benefits). "
-        "The app converts that into business metrics (NPV, IRR, payback), "
-        "a NABCD(E) summary, and a Markdown report you can share with CXOs."
+    solution_details_md = st.text_area(
+        "Detailed solution description (Markdown supported)",
+        value="",
+        help="Provide a longer-form description of the approach, components, workflow, and assumptions. You can use Markdown for formatting.",
+    )
+
+    out_of_scope = st.text_area(
+        "Out of scope / not automated (Markdown supported)",
+        value="",
+        help="List anything intentionally excluded or not automated in this solution. Markdown is supported.",
     )
 
     years = 5
 
+    # Prepare container for soft benefits selections (used across UI and report)
+    soft_benefits_selected: List[Dict[str, Any]] = []
+
     # -------- Sidebar for volume, cost & additional benefits --------
     with st.sidebar:
-        st.image("images/EIA Logo FINAL small_Round.png")
-        st.header("Volume & Cost Assumptions")
+        st.image("images/EIA Logo FINAL small_Round.png", width=75)
+        # st.markdown("---")
+        st.subheader("Volume & Cost Assumptions")
 
         switches_per_location = st.number_input(
             "Number of switches per location",
@@ -564,6 +614,18 @@ def main():
             min_value=0.0,
             value=75.0,
             step=5.0,
+        )
+
+        discount_rate_pct = st.number_input(
+            "Discount rate / hurdle rate (%)",
+            min_value=0.0,
+            value=10.0,
+            step=1.0,
+            help=(
+                "The required annual return used to discount future cash flows (time value of money). "
+                "Used in NPV and as a comparison for IRR. 10% is a common placeholder, "
+                "but verify the standard rate with your finance organization."
+            ),
         )
 
         st.markdown("---")
@@ -880,7 +942,8 @@ def main():
                 )
 
         # Summary of costs at bottom of section (vertical for readability)
-        st.markdown("**Cost summary (USD)**")
+        utils.thick_hr(color="red", thickness=5)
+        st.markdown("**➖ Cost summary (USD)**")
         first_year_total_cost = (
             project_cost
             + annual_run_cost
@@ -907,15 +970,8 @@ def main():
         st.caption(
             "Project cost is incurred in Year 0; annual run cost recurs each year."
         )
-
-        discount_rate_pct = st.number_input(
-            "Discount rate / hurdle rate (%)",
-            min_value=0.0,
-            value=10.0,
-            step=1.0,
-        )
-
-        st.markdown("---")
+        utils.thick_hr(color="red", thickness=5)
+        # st.markdown("---")
         st.header("Additional Benefits (Optional)")
 
         st.caption(
@@ -1040,6 +1096,40 @@ def main():
                         "typical": typical,
                     }
                 )
+
+        # Benefits summary just like Cost summary
+        utils.thick_hr(color="green", thickness=5)
+        st.markdown("**➕ Benefits summary (USD)**")
+        if benefit_inputs:
+            for b in benefit_inputs:
+                cat = b.get("category", "Benefit")
+                nm = b.get("name", cat)
+                amt = float(b.get("annual_value", 0.0))
+                st.write(f"- {nm} ({cat}): ${amt:,.0f}/year")
+            total_addl = sum(float(b.get("annual_value", 0.0)) for b in benefit_inputs)
+            st.write(f"- Total of additional benefits: ${total_addl:,.0f}/year")
+            st.caption("Sign convention: benefits are positive (+ returns).")
+        else:
+            st.caption("No additional benefits selected.")
+        utils.thick_hr(color="green", thickness=5)
+        # Intangible/Soft Benefits (Optional) — moved to last in sidebar
+        # st.markdown("---")
+        st.subheader("Intangible / Soft Benefits (Optional)")
+        try:
+            with open("soft_benefits.json", "r", encoding="utf-8") as f:
+                soft_data = json.load(f)
+            categories = soft_data.get("categories", [])
+            for idx, cat in enumerate(categories):
+                checked = st.checkbox(cat.get("name", f"Category {idx+1}"), key=f"soft_ben_{idx}")
+                if checked:
+                    soft_benefits_selected.append(
+                        {
+                            "name": cat.get("name", ""),
+                            "details": cat.get("details", []),
+                        }
+                    )
+        except Exception as e:
+            st.info(f"Soft benefits file not loaded: {e}")
 
     # -------- Main inputs: manual vs automated time --------
     st.subheader("Manual vs Automated Time per Change (in minutes)")
@@ -1324,11 +1414,12 @@ def main():
                 cats = sorted({b["category"] for b in benefit_inputs})
                 for c in cats:
                     st.write(f"    • {c}")
-            st.write(f"**Total annual benefit:** ${annual_total_benefit:,.2f} USD/year")
+            st.write(f"**➕ Total annual benefit:** ${annual_total_benefit:,.2f} USD/year")
             st.write(f"**Annual run cost:** ${annual_run_cost_effective:,.2f} USD/year")
             st.write(f"**Annual net benefit:** ${annual_net_benefit:,.2f} USD/year")
             st.write(f"**Initial project cost (Year 0):** ${project_cost:,.2f} USD")
             st.write(f"**Discount rate:** {discount_rate_pct:.1f}%")
+            st.caption("Sign convention: benefits are positive (+ returns); costs are investments and modeled as negative cash flows.")
 
         # Cost modeling breakdown display
         st.subheader("Cost Modeling (Selected strategy)")
@@ -1464,6 +1555,14 @@ def main():
         )
         st.caption("\n".join(caption_lines))
 
+        # Intangible / Soft Benefits (UI output) — moved below Cumulative section
+        if soft_benefits_selected:
+            st.subheader("Intangible / Soft Benefits")
+            for sb in soft_benefits_selected:
+                st.markdown(f"**{sb.get('name','')}**")
+                for d in sb.get("details", []):
+                    st.markdown(f"- {d}")
+
         # --- Assumption sanity-check panel ---
 
         st.markdown("---")
@@ -1553,6 +1652,8 @@ def main():
             years=years_list,
             automation_title=automation_title,
             automation_description=automation_description,
+            solution_details_md=solution_details_md,
+            out_of_scope=out_of_scope,
             switches_per_location=switches_per_location,
             num_locations=num_locations,
             total_switches=total_switches,
@@ -1599,7 +1700,8 @@ def main():
         )
 
         st.markdown("---")
-        st.subheader("Download Markdown Report")
+        st.subheader("⬇️ Downloads")
+        st.markdown("**📄 Download Markdown Report Only**")
         st.download_button(
             label="📄 Download business case as Markdown",
             data=markdown_report,
@@ -1607,9 +1709,9 @@ def main():
             mime="text/markdown",
         )
 
-        # --- Save/Load Scenarios (JSON) ---
-        st.markdown("---")
-        st.subheader("Save/Load Scenarios")
+        # --- SaveScenarios (JSON) ---
+        st.markdown("***OR***")
+        st.markdown("📦 Download Markdown Report and Scenario JSON")
 
         # Removed comparison tabs; keeping report & scenario actions only
 
@@ -1622,6 +1724,8 @@ def main():
                 "years": years_list,
                 "automation_title": automation_title,
                 "automation_description": automation_description,
+                "solution_details_md": solution_details_md,
+                "out_of_scope": out_of_scope,
                 "switches_per_location": switches_per_location,
                 "num_locations": num_locations,
                 "total_switches": total_switches,
@@ -1633,6 +1737,8 @@ def main():
                 "minutes_saved_per_change": minutes_saved_per_change,
                 "acquisition_strategy": acquisition_strategy,
                 "cost_breakdown": cost_breakdown,
+                # Intangible / Soft Benefits selections
+                "soft_benefits": soft_benefits_selected,
                 # Debts
                 "include_tech_debt": bool(include_tech_debt),
                 "tech_debt_base_annual": tech_debt_base_annual,
@@ -1676,21 +1782,19 @@ def main():
             zf.writestr(f"scenario_{ts}.json", scenario_json_str)
         zip_bytes = zip_buffer.getvalue()
         st.download_button(
-            label="⬇️ Download report + scenario (ZIP)",
+            label="📄 Download report + 🗂️ JSON scenario (ZIP)",
             data=zip_bytes,
             file_name=f"automation_business_case_{ts}.zip",
             mime="application/zip",
         )
 
-        # Removed 'Build report from a saved scenario JSON' section per request
-
-        # Comparison section removed per request
-
-        # Show a preview (truncated if long)
-        preview = markdown_report[:1500]
-        if len(markdown_report) > 1500:
-            preview += "\n...\n"
-        st.code(preview, language="markdown")
+        show_preview = False
+        if show_preview:
+            # Show a preview (truncated if long)
+            preview = markdown_report[:1500]
+            if len(markdown_report) > 1500:
+                preview += "\n...\n"
+            st.code(preview, language="markdown")
 
 
 # Standard call to the main() function.

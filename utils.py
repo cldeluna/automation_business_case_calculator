@@ -14,6 +14,7 @@ __license__ = "Python"
 # from __future__ import annotations
 
 from typing import List, Optional
+import streamlit as st
 
 
 # ---------- Financial helper functions ----------
@@ -83,6 +84,19 @@ def compute_irr(
 
     return (guess_low + guess_high) / 2
 
+
+def thick_hr(color: str = "red", thickness: int = 3, margin: str = "1rem 0"):
+    st.markdown(
+        f"""
+        <hr style="
+            border: none;
+            height: {thickness}px;
+            background-color: {color};
+            margin: {margin};
+        ">
+        """,
+        unsafe_allow_html=True,
+    )
 
 def main():
     """
