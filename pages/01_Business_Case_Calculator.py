@@ -248,12 +248,10 @@ def build_markdown_report(
             category = b.get("category", "Benefit")
             value = b.get("annual_value", 0.0)
             methodology = b.get("methodology", "").strip() or "Not documented"
-            typical = b.get("typical", "").strip() or "Not documented"
 
             benefit_lines.append(
                 f"- **{name}** (Category: **{category}**) – ${value:,.2f} USD/year  \n"
-                f"  - **Methodology:** {methodology}  \n"
-                f"  - **Typical values / assumptions:** {typical}"
+                f"  - **Methodology:** {methodology}"
             )
         benefits_block = "\n".join(benefit_lines)
     else:
@@ -489,7 +487,7 @@ Based on this {years}-year model:
 
 BENEFIT_CATEGORIES = [
     ("Revenue Acceleration", "rev"),
-    ("Customer Satisfaction / NPS", "nps"),
+    ("Customer Satisfaction / Net Promoter Score (NPS)", "nps"),
     ("Deployment Speed", "deploy"),
     ("Compliance / Audit Savings", "compliance"),
     ("Security Risk Reduction", "security"),
@@ -517,12 +515,19 @@ def main():
             return d.get(key, default)
         return default
 
+    def norm_cat(s: str) -> str:
+        m = {
+            "customer satisfaction / nps": "customer satisfaction / net promoter score (nps)",
+        }
+        t = str(s or "").strip().lower()
+        return m.get(t, t)
+
     def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
         d = st.session_state.get("loaded_scenario")
         if not isinstance(d, dict):
             return None
         for b in d.get("benefits", []) or []:
-            if str(b.get("category", "")).strip().lower() == category.strip().lower():
+            if norm_cat(b.get("category", "")) == norm_cat(category):
                 return b
         return None
 
@@ -1042,9 +1047,8 @@ def main():
         with _ben:
             st.header("Additional Benefits (Optional)")
             st.caption(
-                "Check any benefit types that apply, then specify the annual dollar value, "
-                "methodology, and typical assumptions. Only checked benefits are included "
-                "in the calculations."
+                "Check any benefit types that apply, then specify the annual dollar value and methodology. "
+                "Only checked benefits are included in the calculations."
             )
 
         benefit_inputs: List[Dict[str, Any]] = []
@@ -1055,11 +1059,20 @@ def main():
             if include:
                 _ben.markdown(f"**{label}**")
 
+                help_text = "Short, clear description (e.g., 'Faster upsell of managed LAN deals')."
+                if label == "Customer Satisfaction / Net Promoter Score (NPS)":
+                    help_text = (
+                        "Name this CSAT/NPS benefit clearly. NPS (Net Promoter Score) is a simple loyalty metric based on a 0–10 survey: "
+                        "9–10 are Promoters, 7–8 Passives, 0–6 Detractors. NPS = %Promoters − %Detractors (range −100 to +100). "
+                        "Higher NPS correlates with lower churn, fewer credits, and more referrals. Automation can lift NPS by reducing errors, "
+                        "accelerating delivery, and improving consistency. Example names: 'Fewer service credits from higher NPS', 'Retention uplift from improved NPS'."
+                    )
+
                 name = _ben.text_input(
                     f"{label} – Benefit name",
                     value=(pre_b.get("name") if pre_b else label),
                     key=f"{key}_name",
-                    help="Short, clear description (e.g., 'Faster upsell of managed LAN deals').",
+                    help=help_text,
                 )
 
                 # Helper calculator for Revenue Acceleration / Deployment Speed:
@@ -1148,23 +1161,12 @@ def main():
                     value=(pre_b.get("methodology", "") if pre_b else ""),
                 )
 
-                if label in ("Revenue Acceleration", "Deployment Speed"):
-                    typical = typical_str
-                else:
-                    typical = _ben.text_area(
-                        f"{label} – Typical values / assumptions",
-                        key=f"{key}_typical",
-                        help="Key assumptions or typical values you used so finance can sanity-check.",
-                        value=(pre_b.get("typical", "") if pre_b else ""),
-                    )
-
                 benefit_inputs.append(
                     {
                         "category": label,
                         "name": name,
                         "annual_value": annual_value,
                         "methodology": methodology,
-                        "typical": typical,
                     }
                 )
 
