@@ -144,6 +144,16 @@ Streamlit will open a browser tab. Use the sidebar or the home page links to nav
 - **Finance**
   - [ ] Discount rate / hurdle rate (%)
 
+## Change Workflow Anatomy (context)
+The calculator asks for minutes per step for both manual and automated workflows. This diagram illustrates the 8 steps used in the app:
+
+<p align="center">
+  <img src="./images/AnatomyOfNetChange.png" alt="Anatomy of a Network Change" width="70%">
+  <br/>
+  <em>Eight-step change workflow used for manual vs automated time inputs.</em>
+  <br/>
+</p>
+
 ## Using the Business Case Calculator
 1. **Initiative details**
    - Title and short description/scope.

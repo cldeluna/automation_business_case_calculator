@@ -1043,6 +1043,9 @@ def main():
 
     # -------- Main inputs: manual vs automated time --------
     st.subheader("Manual vs Automated Time per Change (in minutes)")
+    cols_img = st.columns([1, 3, 1])
+    with cols_img[1]:
+        st.image("images/AnatomyOfNetChange.png", use_container_width=True)
 
     col1, col2 = st.columns(2)
 
