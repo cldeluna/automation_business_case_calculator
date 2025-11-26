@@ -21,19 +21,7 @@ from io import BytesIO
 import zipfile
 
 
-
 # ---------- Financial helper functions ----------
-
-
-# def compute_npv(discount_rate: float, cash_flows: List[float]) -> float:
-#     """
-#     Net Present Value.
-#     cash_flows[0] is year 0 (today), cash_flows[1] is year 1, etc.
-#     """
-#     npv = 0.0
-#     for t, cf in enumerate(cash_flows):
-#         npv += cf / ((1 + discount_rate) ** t)
-#     return npv
 
 
 def compute_payback_period(cash_flows: List[float]) -> Optional[float]:
@@ -1120,7 +1108,9 @@ def main():
                 soft_data = json.load(f)
             categories = soft_data.get("categories", [])
             for idx, cat in enumerate(categories):
-                checked = st.checkbox(cat.get("name", f"Category {idx+1}"), key=f"soft_ben_{idx}")
+                checked = st.checkbox(
+                    cat.get("name", f"Category {idx+1}"), key=f"soft_ben_{idx}"
+                )
                 if checked:
                     soft_benefits_selected.append(
                         {
@@ -1414,12 +1404,16 @@ def main():
                 cats = sorted({b["category"] for b in benefit_inputs})
                 for c in cats:
                     st.write(f"    • {c}")
-            st.write(f"**➕ Total annual benefit:** ${annual_total_benefit:,.2f} USD/year")
+            st.write(
+                f"**➕ Total annual benefit:** ${annual_total_benefit:,.2f} USD/year"
+            )
             st.write(f"**Annual run cost:** ${annual_run_cost_effective:,.2f} USD/year")
             st.write(f"**Annual net benefit:** ${annual_net_benefit:,.2f} USD/year")
             st.write(f"**Initial project cost (Year 0):** ${project_cost:,.2f} USD")
             st.write(f"**Discount rate:** {discount_rate_pct:.1f}%")
-            st.caption("Sign convention: benefits are positive (+ returns); costs are investments and modeled as negative cash flows.")
+            st.caption(
+                "Sign convention: benefits are positive (+ returns); costs are investments and modeled as negative cash flows."
+            )
 
         # Cost modeling breakdown display
         st.subheader("Cost Modeling (Selected strategy)")
