@@ -125,18 +125,23 @@ def build_nabcde_summary(
             f"(support/maintenance). Consequences: greater control and fit, skill growth, longer time-to-value, internal opportunity cost."
         )
 
-    summary = f"""**Need** – Manual changes for **{title}**{desc_block} consume about {manual_total_minutes:.1f} minutes per change across ~{tasks_per_year:,.0f} changes/year, tying up roughly {annual_hours_saved:,.0f} engineer-hours and exposing the business to avoidable risk, delay, and inconsistency.
-
-{approach_line}
-
-**Benefits** – Combined financial impact of roughly ${annual_total_benefit:,.0f}/year from engineer-time savings and additional business benefits (revenue, customer experience, risk reduction, and speed). Over {years} years this produces an NPV of about ${npv:,.0f}, an IRR of {irr_text}, and payback in about {payback_text}.
-
-**Competitiveness** – Faster, safer, and more consistent change delivery than manual alternatives, freeing engineers for higher-value work and improving time-to-market versus teams that still rely on ad-hoc CLI changes.
-
-**Defensibility** – Standardized, repeatable workflows reduce human error, enforce policy/compliance, and create a clear audit trail for every change.
-
-**Exit / Ask** – Approve ~${project_cost:,.0f} in initial funding plus ~${annual_run_cost:,.0f}/year to make automated change the default operating model, capturing the quantified savings, risk reduction, and customer experience benefits described above.
-"""
+    summary = (
+        "- **Need** – "
+        f"Manual changes for **{title}**{desc_block} consume about {manual_total_minutes:.1f} minutes per change across ~{tasks_per_year:,.0f} changes/year, "
+        f"tying up roughly {annual_hours_saved:,.0f} engineer-hours and exposing the business to avoidable risk, delay, and inconsistency.\n\n"
+        "- " + approach_line + "\n\n"
+        "- **Benefits** – "
+        f"Combined financial impact of roughly ${annual_total_benefit:,.0f}/year from engineer-time savings and additional business benefits "
+        f"(revenue, customer experience, risk reduction, and speed). Over {years} years this produces an NPV of about ${npv:,.0f}, "
+        f"an IRR of {irr_text}, and payback in about {payback_text}.\n\n"
+        "- **Competitiveness** – "
+        "Faster, safer, and more consistent change delivery than manual alternatives, freeing engineers for higher-value work and improving time-to-market versus teams that still rely on ad-hoc CLI changes.\n\n"
+        "- **Defensibility** – "
+        "Standardized, repeatable workflows reduce human error, enforce policy/compliance, and create a clear audit trail for every change.\n\n"
+        "- **Exit / Ask** – "
+        f"Approve ~${project_cost:,.0f} in initial funding plus ~${annual_run_cost:,.0f}/year to make automated change the default operating model, "
+        "capturing the quantified savings, risk reduction, and customer experience benefits described above."
+    )
     return summary
 
 
@@ -1651,11 +1656,36 @@ def main():
         appendix_lines = []
         appendix_lines.append("### Inputs and selections")
         appendix_lines.append(f"- Years modeled: `{years_list}`")
-        appendix_lines.append(f"- Changes per year: `{tasks_per_year:,.0f}` (from sidebar 'Changes per month' × 12)")
+        appendix_lines.append(f"- Changes per year: `{tasks_per_year:,.0f}` (from sidebar 'Changes per month ({tasks_per_month:g})' × 12)")
         appendix_lines.append(f"- Automation coverage: `{automation_coverage_pct:.1f}%` (sidebar)")
         appendix_lines.append(f"- Engineer fully-loaded cost: `${hourly_rate:,.2f}`/hour (sidebar)")
         appendix_lines.append(f"- Acquisition strategy: `{acquisition_strategy}` (sidebar)")
-        appendix_lines.append(f"- One-time project cost (Y0): `${project_cost:,.2f}` (from selected strategy inputs)")
+        # Build a numeric breakdown for one-time project cost using itemized one-time costs
+        one_time_items = [
+            (str(it.get("name", "One-time")), float(it.get("amount", 0.0)))
+            for it in (cost_breakdown or [])
+            if str(it.get("timing", "")).lower() == "one-time" and float(it.get("amount", 0.0)) > 0
+        ]
+        # Ensure remediation items show up if not already in cost_breakdown
+        if (tech_debt_remediation_one_time or 0) > 0 and not any(
+            name.lower().startswith("technical debt remediation") for name, _ in one_time_items
+        ):
+            one_time_items.append(("Technical debt remediation", float(tech_debt_remediation_one_time)))
+        if (csat_debt_remediation_one_time or 0) > 0 and not any(
+            name.lower().startswith("csat debt remediation") for name, _ in one_time_items
+        ):
+            one_time_items.append(("CSAT debt remediation", float(csat_debt_remediation_one_time)))
+        if one_time_items:
+            appendix_lines.append(f"- One-time project cost (Y0): ${project_cost:,.2f}")
+            appendix_lines.append("  - Components:")
+            for name, amt in one_time_items:
+                appendix_lines.append(f"    - {name}: ${amt:,.2f}")
+            appendix_lines.append(
+                "  - Tip: Y0 includes one-time Buy/Build cost items" +
+                (" and remediation costs" if (include_tech_debt and tech_debt_remediation_one_time > 0) or (include_csat_debt and csat_debt_remediation_one_time > 0) else "") + "."
+            )
+        else:
+            appendix_lines.append(f"- One-time project cost (Y0): `${project_cost:,.2f}` (from selected strategy inputs)")
         appendix_lines.append(f"- Annual run cost (base): `${annual_run_cost:,.2f}` (from selected strategy inputs)")
 
         if benefit_inputs:
@@ -1829,8 +1859,59 @@ def main():
 
         st.markdown("---")
         st.subheader("NABCD(E) Summary (Copy-Paste Ready)")
-        st.markdown(nabcde_summary)
-        st.code(nabcde_summary, language="markdown")
+        # Render with bold headings and plain text bodies
+        _desc_block = (
+            f" ({automation_description.strip()})" if automation_description.strip() else ""
+        )
+        st.markdown("**Need** –")
+        st.text(
+            f"Manual changes for {automation_title or 'Network Automation Initiative'}{_desc_block} "
+            f"consume about {manual_total_minutes:.1f} minutes per change across ~{tasks_per_year:,.0f} changes/year, "
+            f"tying up roughly {annual_hours_saved:,.0f} engineer-hours and exposing the business to avoidable risk, delay, and inconsistency."
+        )
+
+        st.markdown("**Approach** –")
+        if (acquisition_strategy or "").lower().startswith("buy"):
+            st.text(
+                "Buy: implement network automation to handle ~"
+                f"{automation_coverage_pct:.1f}% of changes end-to-end (execution, config assembly, ITSM integration, validation). "
+                f"One-time project ~${project_cost:,.0f}; ongoing ~${annual_run_cost:,.0f}/year (licenses/support). "
+                "Consequences: faster time-to-value, less internal engineering, vendor dependency, predictable support SLAs."
+            )
+        else:
+            st.text(
+                "Build: implement in-house automation to handle ~"
+                f"{automation_coverage_pct:.1f}% of changes end-to-end (execution, config assembly, ITSM integration, validation). "
+                f"One-time project ~${project_cost:,.0f}; ongoing ~${annual_run_cost:,.0f}/year (support/maintenance). "
+                "Consequences: greater control and fit, skill growth, longer time-to-value, internal opportunity cost."
+            )
+
+        st.markdown("**Benefits** –")
+        st.text(
+            f"Combined financial impact of roughly ${annual_total_benefit:,.0f}/year from engineer-time savings and additional business benefits "
+            f"(revenue, customer experience, risk reduction, and speed). Over {years_list} years this produces an NPV of about ${npv:,.0f}, "
+            f"an IRR of {irr_text}, and payback in about {payback_text}."
+        )
+
+        st.markdown("**Competitiveness** –")
+        st.text(
+            "Faster, safer, and more consistent change delivery than manual alternatives, freeing engineers for higher-value work and "
+            "improving time-to-market versus teams that still rely on ad-hoc CLI changes."
+        )
+
+        st.markdown("**Defensibility** –")
+        st.text(
+            "Standardized, repeatable workflows reduce human error, enforce policy/compliance, and create a clear audit trail for every change."
+        )
+
+        st.markdown("**Exit / Ask** –")
+        st.text(
+            f"Approve ~${project_cost:,.0f} in initial funding plus ~${annual_run_cost:,.0f}/year to make automated change the default operating model, "
+            "capturing the quantified savings, risk reduction, and customer experience benefits described above."
+        )
+
+        # Keep copy-paste markdown version
+        # st.code(nabcde_summary, language="markdown")
 
         # --- Markdown report download ---
 
