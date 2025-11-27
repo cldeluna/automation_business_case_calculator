@@ -497,6 +497,34 @@ Based on this {years}-year model:
     return report
 
 
+# ---------- Local helpers (hoisted from main) ----------
+
+
+def sv(key: str, default: Any):
+    d = st.session_state.get("loaded_scenario")
+    if isinstance(d, dict):
+        return d.get(key, default)
+    return default
+
+
+def norm_cat(s: str) -> str:
+    m = {
+        "customer satisfaction / nps": "customer satisfaction / net promoter score (nps)",
+    }
+    t = str(s or "").strip().lower()
+    return m.get(t, t)
+
+
+def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
+    d = st.session_state.get("loaded_scenario")
+    if not isinstance(d, dict):
+        return None
+    for b in d.get("benefits", []) or []:
+        if norm_cat(b.get("category", "")) == norm_cat(category):
+            return b
+    return None
+
+
 # ---------- Streamlit app ----------
 
 BENEFIT_CATEGORIES = [
@@ -529,27 +557,6 @@ def main():
 
 
         # ---- Scenario loader (optional) ----
-        def sv(key: str, default: Any):
-            d = st.session_state.get("loaded_scenario")
-            if isinstance(d, dict):
-                return d.get(key, default)
-            return default
-
-        def norm_cat(s: str) -> str:
-            m = {
-                "customer satisfaction / nps": "customer satisfaction / net promoter score (nps)",
-            }
-            t = str(s or "").strip().lower()
-            return m.get(t, t)
-
-        def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
-            d = st.session_state.get("loaded_scenario")
-            if not isinstance(d, dict):
-                return None
-            for b in d.get("benefits", []) or []:
-                if norm_cat(b.get("category", "")) == norm_cat(category):
-                    return b
-            return None
 
         with st.expander("Load a saved scenario (JSON)", expanded=False):
             enable_load = st.checkbox(
