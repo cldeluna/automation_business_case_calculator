@@ -13,6 +13,8 @@ __license__ = "Python"
 
 import streamlit as st
 import json
+from datetime import datetime
+import utils
 
 
 def _join(items):
@@ -80,6 +82,9 @@ def main():
               - Can allow both read and write interactions and integrates with other components as needed.
             """
         )
+
+    utils.thick_hr(color="grey", thickness=5)
+    st.markdown("***Expand each section of the framework to work though the wizard***")
 
     # Presentation section
     with st.expander("Presentation", expanded=False):
@@ -205,7 +210,8 @@ def main():
             f"Presentation authentication will use {_join(selected_auth_pres)}."
         )
 
-        st.markdown("**Preview narrative**")
+        utils.thick_hr(color="#6785a0", thickness=3)
+        st.markdown("**Preview Solution Highlights**")
         st.write(users_sentence)
         st.write(interaction_sentence)
         st.write(tools_sentence)
@@ -318,7 +324,8 @@ def main():
             f"Intent will be provided via {_join(selected_intent_prov)}."
         )
 
-        st.markdown("**Preview narrative**")
+        utils.thick_hr(color="#6785a0", thickness=3)
+        st.markdown("**Preview Solution Highlights**")
         st.write(intent_sentence)
         st.write(intent_provided_sentence)
 
@@ -408,52 +415,53 @@ def main():
                 "Other observability tool(s)", key="obs_tool_other"
             )
 
-            # Narrative synthesis
+        # Narrative synthesis
 
-            selected_methods = [k for k, v in state_methods_checks.items() if v]
-            selected_tools = [k for k, v in obs_tools_checks.items() if v]
-            if obs_tools_other_enabled and obs_tools_other.strip():
-                selected_tools.append(obs_tools_other.strip())
+        selected_methods = [k for k, v in state_methods_checks.items() if v]
+        selected_tools = [k for k, v in obs_tools_checks.items() if v]
+        if obs_tools_other_enabled and obs_tools_other.strip():
+            selected_tools.append(obs_tools_other.strip())
 
-            methods_sentence = (
-                f"Network state will be determined via {_join(selected_methods)}."
+        methods_sentence = (
+            f"Network state will be determined via {_join(selected_methods)}."
+        )
+        go_no_go_sentence = f"Go/No-Go logic: {go_no_go_text.strip() or 'TBD'}."
+        if add_logic_choice == "Yes":
+            additional_logic_sentence = f"Additional gating logic will be applied: {add_logic_text.strip() or 'TBD'}."
+        else:
+            additional_logic_sentence = (
+                "No additional gating logic beyond the defined go/no-go criteria."
             )
-            go_no_go_sentence = f"Go/No-Go logic: {go_no_go_text.strip() or 'TBD'}."
-            if add_logic_choice == "Yes":
-                additional_logic_sentence = f"Additional gating logic will be applied: {add_logic_text.strip() or 'TBD'}."
-            else:
-                additional_logic_sentence = (
-                    "No additional gating logic beyond the defined go/no-go criteria."
-                )
-            tools_sentence_obs = (
-                f"Observability will be supported by {_join(selected_tools)}."
-            )
+        tools_sentence_obs = (
+            f"Observability will be supported by {_join(selected_tools)}."
+        )
 
-            st.markdown("**Preview narrative**")
-            st.write(methods_sentence)
-            st.write(go_no_go_sentence)
-            st.write(additional_logic_sentence)
-            st.write(tools_sentence_obs)
+        utils.thick_hr(color="#6785a0", thickness=3)
+        st.markdown("**Preview Solution Highlights**")
+        st.write(methods_sentence)
+        st.write(go_no_go_sentence)
+        st.write(additional_logic_sentence)
+        st.write(tools_sentence_obs)
 
-            # Persist
-            existing = st.session_state.get("solution_wizard", {})
-            merged_obs = {
-                **existing,
-                "observability": {
-                    "methods": methods_sentence,
-                    "go_no_go": go_no_go_sentence,
-                    "additional_logic": additional_logic_sentence,
-                    "tools": tools_sentence_obs,
-                    "selections": {
-                        "methods": selected_methods,
-                        "go_no_go_text": go_no_go_text,
-                        "additional_logic_enabled": add_logic_choice == "Yes",
-                        "additional_logic_text": add_logic_text,
-                        "tools": selected_tools,
-                    },
+        # Persist
+        existing = st.session_state.get("solution_wizard", {})
+        merged_obs = {
+            **existing,
+            "observability": {
+                "methods": methods_sentence,
+                "go_no_go": go_no_go_sentence,
+                "additional_logic": additional_logic_sentence,
+                "tools": tools_sentence_obs,
+                "selections": {
+                    "methods": selected_methods,
+                    "go_no_go_text": go_no_go_text,
+                    "additional_logic_enabled": add_logic_choice == "Yes",
+                    "additional_logic_text": add_logic_text,
+                    "tools": selected_tools,
                 },
-            }
-            st.session_state["solution_wizard"] = merged_obs
+            },
+        }
+        st.session_state["solution_wizard"] = merged_obs
 
         # Orchestration section
 
@@ -500,7 +508,8 @@ def main():
                 f"Orchestration will be utilized: {orch_details.strip() or 'TBD'}."
             )
 
-        st.markdown("**Preview narrative**")
+        utils.thick_hr(color="#6785a0", thickness=3)
+        st.markdown("**Preview Solution Highlights**")
         st.write(orch_sentence)
 
         # Persist
@@ -598,7 +607,8 @@ def main():
         norm_sentence = f"Collected data will be normalized via {_join(selected_norm)}."
         scale_sentence = f"Expected scale: ~{devices or 'TBD'} devices, ~{metrics or 'TBD'} metrics/sec, cadence {cadence or 'TBD'}."
 
-        st.markdown("**Preview narrative**")
+        utils.thick_hr(color="#6785a0", thickness=3)
+        st.markdown("**Preview Solution Highlights**")
         st.write(methods_sentence)
         st.write(auth_sentence)
         st.write(handling_sentence)
@@ -666,7 +676,8 @@ def main():
 
         exec_sentence = f"Execution will be performed using {_join(selected_exec)}."
 
-        st.markdown("**Preview narrative**")
+        utils.thick_hr(color="#6785a0", thickness=3)
+        st.markdown("**Preview Solution Highlights**")
         st.write(exec_sentence)
 
         existing = st.session_state.get("solution_wizard", {})
@@ -682,8 +693,8 @@ def main():
         st.session_state["solution_wizard"] = merged_exec
 
     # Live narrative preview
-    st.markdown("---")
-    st.subheader("Solution Narrative Preview")
+    utils.thick_hr(color="grey", thickness=5)
+    st.subheader("Solution Highlights")
     payload = st.session_state.get("solution_wizard", {})
 
     def _md_line(text: str) -> str:
@@ -781,10 +792,11 @@ def main():
     st.subheader("Export Solution Wizard")
     final_payload = payload
     final_json_bytes = json.dumps(final_payload, indent=2).encode("utf-8")
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     st.download_button(
         label="Download Wizard JSON",
         data=final_json_bytes,
-        file_name="solution_wizard.json",
+        file_name=f"solution_wizard_{ts}.json",
         mime="application/json",
         use_container_width=True,
     )
