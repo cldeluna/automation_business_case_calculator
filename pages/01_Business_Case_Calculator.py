@@ -11,6 +11,22 @@ __copyright__ = "Copyright (c) 2025 Claudia"
 __license__ = "Python"
 
 
+"""
+Network Automation Business Case – Streamlit page
+
+This page implements the end-to-end Business Case Calculator UI and reporting
+pipeline. It includes:
+- Financial helpers (payback, IRR) used by the page
+- NABCD(E) summary builder
+- Comprehensive Markdown report builder
+- Hoisted local helpers for scenario access and category normalization
+- Streamlit layout with two tabs: Business Case (main flow) and Arithmetic Calculator (embedded)
+
+Outputs include key metrics (NPV, IRR, Payback), visualizations, a copy/paste
+NABCD(E) summary, an Appendix breakdown, and downloadable artifacts (Markdown
+report, scenario JSON, and PNG charts).
+"""
+
 import utils
 
 import streamlit as st
@@ -26,8 +42,18 @@ import zipfile
 
 def compute_payback_period(cash_flows: List[float]) -> Optional[float]:
     """
-    Simple (undiscounted) payback period in years.
-    Returns fractional years, or None if payback never happens.
+    Compute the simple (undiscounted) payback period for a series of cash flows.
+
+    Parameters
+    - cash_flows: Sequence of cash flows where index 0 is Year 0 (today), index 1 is Year 1, etc.
+
+    Returns
+    - Fractional years (float) to reach non-negative cumulative cash flow, or None if payback is never achieved within the provided series.
+
+    Notes
+    - This ignores the time value of money (no discounting).
+    - If cumulative becomes non-negative in Year t, linear interpolation within that year is used to return a fractional year.
+    - If the first cash flow (Year 0) is already non-negative, returns 0.0.
     """
     cumulative = 0.0
     for t in range(len(cash_flows)):
@@ -48,9 +74,20 @@ def compute_irr(
     cash_flows: List[float], guess_low: float = -0.9, guess_high: float = 10.0
 ) -> Optional[float]:
     """
-    Very simple IRR calculation using binary search.
+    Estimate the Internal Rate of Return (IRR) by binary search.
 
-    Returns the rate r such that NPV(r) ~= 0, or None if it cannot find a solution.
+    Parameters
+    - cash_flows: List of cash flows (Y0..Yn). Sign changes are typically required for IRR to exist.
+    - guess_low: Lower bound for the search interval (as a decimal rate), default -0.90.
+    - guess_high: Upper bound for the search interval (as a decimal rate), default 10.0.
+
+    Returns
+    - The IRR as a decimal (e.g., 0.25 for 25%), or None if no sign change occurs over the bracket and a root cannot be found.
+
+    Notes
+    - Uses utils.compute_npv to evaluate NPV at candidate rates.
+    - Requires an NPV sign change between the initial bounds to ensure a root.
+    - This is a simple, robust method intended for business-case scale problems.
     """
 
     def npv_at(rate: float) -> float:
@@ -96,7 +133,26 @@ def build_nabcde_summary(
     acquisition_strategy: str,
 ) -> str:
     """
-    Build a short NABCD(E) summary in plain markdown.
+    Build a short NABCD(E) summary (Need, Approach, Benefits, Competitiveness, Defensibility, Exit/Ask).
+
+    Parameters
+    - years: Horizon used for summary metrics (for context in the Benefits sentence).
+    - automation_title: Title of the initiative (fallback used if blank).
+    - automation_description: Short description appended in parentheses if provided.
+    - tasks_per_year: Annual count of applicable changes.
+    - automation_coverage_pct: Percent of changes automated.
+    - manual_total_minutes: Manual minutes per change.
+    - annual_hours_saved: Total engineer-hours saved per year.
+    - annual_total_benefit: Sum of time-savings benefit and any additional benefits.
+    - project_cost: One-time Year 0 cost.
+    - annual_run_cost: Ongoing annual run cost.
+    - npv: Net Present Value over the modeled horizon.
+    - payback: Simple (undiscounted) payback period in years (or None).
+    - irr: Internal Rate of Return as a decimal (or None).
+    - acquisition_strategy: "Buy" or "Build" to tailor the approach line and consequences.
+
+    Returns
+    - Markdown string containing an executive-ready one-pager summary.
     """
 
     title = automation_title or "Network Automation Initiative"
@@ -194,7 +250,29 @@ def build_markdown_report(
     appendix_md: str,
 ) -> str:
     """
-    Build a markdown report with a CXO-ready story but using the engineer inputs.
+    Construct a comprehensive Markdown report for the business case.
+
+    Parameters (selected)
+    - years: Model horizon in years.
+    - automation_title / automation_description: Initiative identity and scope.
+    - solution_details_md / out_of_scope: Optional long-form Markdown sections.
+    - vol_cost_methodology / acq_methodology: Optional methodology text for assumptions.
+    - switches_per_location / num_locations / total_switches: Scope sizing inputs.
+    - tasks_per_year / automation_coverage_pct / hourly_rate: Operational drivers.
+    - manual_total_minutes / auto_total_minutes / minutes_saved_per_change: Per-change timings.
+    - annual_hours_saved / annual_cost_savings / annual_total_benefit: Annualized impacts.
+    - annual_run_cost / annual_net_benefit / project_cost: Cost structure.
+    - discount_rate_pct / cash_flows / npv / payback / irr / cumulative checkpoints: Financial metrics.
+    - nabcde_summary: Pre-built one-page NABCD(E) text inserted near the top.
+    - acquisition_strategy / cost_breakdown: Strategy and itemized costs (for tables).
+    - appendix_md: Additional appendix markdown appended at the end of the report.
+
+    Returns
+    - A Markdown-formatted string suitable for saving or presentation.
+
+    Notes
+    - The function assembles sections conditionally based on provided inputs.
+    - Monetary values are formatted with thousands separators and explicit USD units.
     """
 
     title = automation_title or "Network Automation Business Case"
@@ -512,6 +590,16 @@ Based on this {years}-year model:
 
 
 def sv(key: str, default: Any):
+    """
+    Scenario value accessor.
+
+    Parameters
+    - key: Field name to retrieve from st.session_state['loaded_scenario'] if present.
+    - default: Fallback value when key is missing or the scenario is not a dict.
+
+    Returns
+    - The value stored under the key in the loaded scenario, or the provided default.
+    """
     d = st.session_state.get("loaded_scenario")
     if isinstance(d, dict):
         return d.get(key, default)
@@ -519,6 +607,15 @@ def sv(key: str, default: Any):
 
 
 def norm_cat(s: str) -> str:
+    """
+    Normalize a benefit category label for case-insensitive comparisons.
+
+    Parameters
+    - s: Raw category string (possibly mixed case or variant).
+
+    Returns
+    - Normalized, lowercased category label with known aliases mapped.
+    """
     m = {
         "customer satisfaction / nps": "customer satisfaction / net promoter score (nps)",
     }
@@ -527,6 +624,15 @@ def norm_cat(s: str) -> str:
 
 
 def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
+    """
+    Retrieve a benefit entry from the loaded scenario matching a category.
+
+    Parameters
+    - category: Category label to match (case-insensitive; normalized).
+
+    Returns
+    - The first benefit dict from the scenario whose normalized category matches, or None.
+    """
     d = st.session_state.get("loaded_scenario")
     if not isinstance(d, dict):
         return None
@@ -540,6 +646,25 @@ def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
 
 
 def main():
+    """
+    Render the Business Case Calculator Streamlit page.
+
+    Structure
+    - Header and tab layout: "Business Case" (primary workflow) and "Arithmetic Calculator" (embedded external calculator).
+    - Sidebar inputs:
+      - Volume & Cost Assumptions (with optional methodology)
+      - Acquisition Strategy Buy/Build (with costs and optional methodology)
+      - Optional Debts & Risk and Additional/Soft benefits
+    - Main content:
+      - Manual vs. Automated timings, live previews, and Compute action
+      - Summaries, cost modeling table, cash flows, metrics, and charts
+      - NABCD(E) summary and Appendix breakdown
+      - Download buttons for Markdown, JSON scenario, and ZIP with images
+
+    Notes
+    - Uses st.session_state for scenario persistence and to prefill fields.
+    - Monetary values are formatted with thousands separators for readability.
+    """
     st.set_page_config(
         page_title="Network Automation Business Case",
         page_icon="images/EIA_Favicon.png",

@@ -22,71 +22,38 @@ import plotly.graph_objects as go
 
 
 def compute_npv(discount_rate: float, cash_flows: List[float]) -> float:
-    """Net Present Value.
-    cash_flows[0] is year 0 (today), cash_flows[1] is year 1, etc.
+    """
+    Compute Net Present Value (NPV) for a series of cash flows.
+
+    Parameters
+    - discount_rate: Annual discount or hurdle rate as a decimal (e.g., 0.10 for 10%).
+    - cash_flows: Sequence of cash flows where index 0 is Year 0 (today), index 1 is Year 1, etc.
+
+    Returns
+    - The NPV as a float. Values > 0 indicate value creation at the given discount rate.
+
+    Notes
+    - This uses simple annual compounding: cf_t / (1 + r)^t.
+    - Sign convention is flexible; commonly investments are negative at t=0 and benefits positive thereafter.
     """
     npv = 0.0
     for t, cf in enumerate(cash_flows):
         npv += cf / ((1 + discount_rate) ** t)
     return npv
 
-#
-# def compute_payback_period(cash_flows: List[float]) -> Optional[float]:
-#     """Simple (undiscounted) payback period in years.
-#     Returns fractional years, or None if payback never happens.
-#     """
-#     cumulative = 0.0
-#     for t in range(len(cash_flows)):
-#         prev_cumulative = cumulative
-#         cumulative += cash_flows[t]
-#         if cumulative >= 0:
-#             if t == 0:
-#                 return 0.0
-#             cash_this_year = cash_flows[t]
-#             if cash_this_year == 0:
-#                 return float(t)
-#             fraction = (0 - prev_cumulative) / cash_this_year
-#             return (t - 1) + fraction
-#     return None
-#
-#
-# def compute_irr(
-#     cash_flows: List[float],
-#     guess_low: float = -0.9,
-#     guess_high: float = 10.0,
-#     tol: float = 1e-6,
-#     max_iter: int = 100,
-# ) -> Optional[float]:
-#     """Very simple IRR using binary search.
-#     Returns r such that NPV(r) ~= 0, or None if no solution exists.
-#     """
-#
-#     def npv_at(rate: float) -> float:
-#         return compute_npv(rate, cash_flows)
-#
-#     npv_low = npv_at(guess_low)
-#     npv_high = npv_at(guess_high)
-#
-#     # Need sign change to have a root in [low, high]
-#     if npv_low * npv_high > 0:
-#         return None
-#
-#     for _ in range(max_iter):
-#         mid = (guess_low + guess_high) / 2
-#         npv_mid = npv_at(mid)
-#         if abs(npv_mid) < tol:
-#             return mid
-#         if npv_low * npv_mid < 0:
-#             guess_high = mid
-#             npv_high = npv_mid
-#         else:
-#             guess_low = mid
-#             npv_low = npv_mid
-#
-#     return (guess_low + guess_high) / 2
-#
 
 def thick_hr(color: str = "red", thickness: int = 3, margin: str = "1rem 0"):
+    """
+    Render a visually thicker horizontal line in Streamlit using raw HTML.
+
+    Parameters
+    - color: CSS color for the rule (named color or hex).
+    - thickness: Pixel height of the line.
+    - margin: CSS margin to apply (e.g., "1rem 0").
+
+    Behavior
+    - Uses st.markdown with unsafe_allow_html to inject an <hr> replacement.
+    """
     st.markdown(
         f"""
         <hr style="
@@ -109,6 +76,18 @@ def fig_annual_benefits_vs_costs(
     annual_run_cost_effective: float,
     project_cost: float,
 ):
+    """
+    Build a grouped bar chart comparing annual benefits vs. costs.
+
+    Parameters
+    - years: Number of modeled years (not counting Year 0).
+    - annual_total_benefit: Annual benefit amount (positive) applied to Y1..Y{years}.
+    - annual_run_cost_effective: Effective annual run cost (may include debt adjustments), applied to Y1..Y{years} as negative bars.
+    - project_cost: One-time Year 0 cost (displayed as negative bar at Y0).
+
+    Returns
+    - Plotly Figure configured for display in Streamlit.
+    """
     labels = [f"Y{t}" for t in range(0, years + 1)]
     benefits = [0.0] + [float(annual_total_benefit)] * years
     costs = [float(-project_cost)] + [float(-annual_run_cost_effective)] * years
@@ -134,6 +113,16 @@ def fig_annual_benefits_vs_costs(
 
 
 def fig_cumulative_cash_flow(cash_flows: List[float], payback: Optional[float] = None):
+    """
+    Build a line chart of cumulative cash flow over time.
+
+    Parameters
+    - cash_flows: Sequence of cash flows starting with Year 0.
+    - payback: Optional payback period (years). If provided and within range, a vertical line is drawn.
+
+    Returns
+    - Plotly Figure for cumulative cash flows including a horizontal zero baseline.
+    """
     cum = []
     total = 0.0
     for cf in cash_flows:
@@ -160,6 +149,15 @@ def fig_cumulative_cash_flow(cash_flows: List[float], payback: Optional[float] =
 
 
 def fig_net_cash_flow(cash_flows: List[float]):
+    """
+    Build a line chart of net cash flow by year.
+
+    Parameters
+    - cash_flows: Sequence of cash flows (Y0..Yn).
+
+    Returns
+    - Plotly Figure with a zero baseline to highlight sign changes.
+    """
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(x=list(range(len(cash_flows))), y=[float(v) for v in cash_flows], mode="lines+markers", name="Net")
@@ -170,6 +168,15 @@ def fig_net_cash_flow(cash_flows: List[float]):
 
 
 def fig_waterfall(cash_flows: List[float]):
+    """
+    Build a waterfall chart for cash flows from Y0 through Yn.
+
+    Parameters
+    - cash_flows: Sequence of cash flows (Y0..Yn).
+
+    Returns
+    - Plotly Waterfall Figure showing the cumulative progression of cash flows.
+    """
     labels = [f"Y{t}" for t in range(0, len(cash_flows))]
     measures = ["relative"] * len(cash_flows)
     fig = go.Figure(
@@ -187,10 +194,13 @@ def fig_waterfall(cash_flows: List[float]):
 
 def main():
     """
-    Utility helpers for the Automation Business Case app.
+    Module self-check entry point (optional).
 
-    Phase 1: financial helpers migrated from the single-file app so that
-    pages can import from utils and we can continue refactoring incrementally.
+    Purpose
+    - Provides a basic callable for ad-hoc verification or future CLI hooks.
+
+    Current behavior
+    - No-op (pass). Keep in place to allow running this module directly without errors.
     """
     pass
 
