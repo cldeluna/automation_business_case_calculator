@@ -673,15 +673,13 @@ def main():
     )
 
     st.title("Network Automation Business Case Calculator")
-
+    st.caption(
+        "Automation Business Case content appears below. Use the Calculator tab for quick arithmetic calculations.")
     # --- Tabs ---
     tab_bc, tab_calc = st.tabs(["Business Case", "Calculator"])
     with tab_bc:
-        st.caption("Business Case content appears below. Use the Calculator tab for a quick back-of-the-envelope estimate.")
-
 
         # ---- Scenario loader (optional) ----
-
         with st.expander("Load a saved scenario (JSON)", expanded=False):
             enable_load = st.checkbox(
                 "Load scenario JSON", value=False, key="load_scn_toggle"
@@ -704,6 +702,7 @@ def main():
                         st.error(f"Failed to parse scenario JSON: {e}")
 
         # ---- High-level automation info (title, description) ----
+        utils.thick_hr(color="grey", thickness=5)
         st.subheader("Automation Initiative Details")
 
         st.write(
@@ -728,6 +727,43 @@ def main():
             help="One or two sentences describing what this automation will do and where.",
         )
 
+        utils.thick_hr(color="grey", thickness=5)
+        col_img, col_tips = st.columns([1, 1])
+        with col_img:
+            logo_col, title_col = st.columns([0.12, 0.88])
+            with logo_col:
+                st.image("images/naf_icon_50.png")
+            with title_col:
+                st.markdown("**Network Automation Forum's Automation Framework**")
+            st.caption(
+                "Source: https://github.com/Network-Automation-Forum/reference/blob/main/docs/Framework/Framework.md"
+            )
+
+            st.image(
+                "https://github.com/Network-Automation-Forum/reference/blob/main/docs/Framework/images/arch.png?raw=true",
+                # width=520,
+                use_container_width=True,
+            )
+
+        with col_tips:
+            st.subheader("Design Tips – Questions to guide your solution")
+            st.markdown(
+                "\n".join(
+                    [
+                        "- Who are the users and stakeholders (NetOps, SecOps, ITSM)?",
+                        "- How will they interact with the new Automation (CLI, GUI, API)?",
+                        "- What change types and devices are in scope vs. out of scope?",
+                        "- Which systems must integrate (ITSM, CMDB, source of truth, chat, SIEM)?",
+                        "- What inputs are required and where do they come from (APIs, forms, files)?",
+                        "- What guardrails/policies must be enforced (compliance, approvals, RBAC)?",
+                        "- How is validation performed pre/post-change? What is the rollback plan?",
+                        "- How are changes tracked and audited (tickets, logs, artifacts)?",
+                        "- What are performance/scale needs (sites, devices, concurrency)?",
+                        "- What are security considerations (secrets, access, segmentation)?",
+                        "- How will success be measured (KPIs, SLOs, error rates, lead time)?",
+                    ]
+                )
+            )
         solution_details_md = st.text_area(
             "Detailed solution description (Markdown supported)",
             value=sv("solution_details_md", ""),
@@ -1424,6 +1460,7 @@ def main():
                 st.info(f"Soft benefits file not loaded: {e}")
 
         # -------- Main inputs: manual vs automated time --------
+        utils.thick_hr(color="grey", thickness=5)
         st.subheader("Manual vs Automated Time per Change (in minutes)")
         cols_img = st.columns([1, 3, 1])
         with cols_img[1]:
