@@ -79,8 +79,6 @@ def compute_irr(
 
 
 # ---------- NABCD(E) summary builder ----------
-
-
 def build_nabcde_summary(
     years: int,
     automation_title: str,
@@ -154,6 +152,8 @@ def build_markdown_report(
     automation_description: str,
     solution_details_md: str,
     out_of_scope: str,
+    vol_cost_methodology: str,
+    acq_methodology: str,
     switches_per_location: float,
     num_locations: float,
     total_switches: float,
@@ -243,6 +243,17 @@ def build_markdown_report(
     out_of_scope_block = (
         f"\n\n## Out of Scope / Not Automated\n\n{out_of_scope.strip()}\n"
         if out_of_scope.strip()
+        else ""
+    )
+
+    vol_cost_methodology_block = (
+        f"\n\n### Volume & Cost Assumptions – Methodology\n\n{vol_cost_methodology.strip()}\n"
+        if str(vol_cost_methodology or "").strip()
+        else ""
+    )
+    acq_methodology_block = (
+        f"\n\n### Acquisition Strategy – Methodology\n\n{acq_methodology.strip()}\n"
+        if str(acq_methodology or "").strip()
         else ""
     )
 
@@ -353,7 +364,7 @@ def build_markdown_report(
 - **Engineer fully-loaded cost:** ${hourly_rate:,.2f} USD/hour
  - **Acquisition strategy:** {acquisition_strategy}
 
-{scope_lines}{desc_block}{solution_details_block}{out_of_scope_block}
+{scope_lines}{desc_block}{solution_details_block}{out_of_scope_block}{vol_cost_methodology_block}{acq_methodology_block}
 ## Need
 
 Manual change handling for this activity is consuming significant engineer time and slowing delivery:
@@ -526,19 +537,6 @@ def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
 
 
 # ---------- Streamlit app ----------
-
-BENEFIT_CATEGORIES = [
-    ("Revenue Acceleration", "rev"),
-    ("Customer Satisfaction / Net Promoter Score (NPS)", "nps"),
-    ("Deployment Speed", "deploy"),
-    ("Compliance / Audit Savings", "compliance"),
-    ("Security Risk Reduction", "security"),
-    ("Time-to-Market", "ttm"),
-    ("Competitive Advantage", "competitive"),
-    ("Employee Retention", "retention"),
-    ("Reduced 3rd party support spend", "thirdparty_support"),
-    ("Other", "other"),
-]
 
 
 def main():
@@ -867,6 +865,20 @@ def main():
                         + ". Confirm these should truly be zero."
                     )
 
+            # Methodology text areas for sections (after both Buy/Build branches)
+            with _vol_cost:
+                vol_cost_methodology_text = st.text_area(
+                    "Volume & Cost Assumptions – Methodology (how you calculated it)",
+                    value=str(sv("vol_cost_methodology", "")),
+                    help="Optional: explain sources/assumptions for volume and cost inputs.",
+                )
+            with _acq:
+                acq_methodology_text = st.text_area(
+                    "Acquisition Strategy – Methodology (how you calculated it)",
+                    value=str(sv("acq_methodology", "")),
+                    help="Optional: explain how one-time and ongoing costs were estimated.",
+                )
+
             # Debts & Risk (Optional) – Technical debt modeled from automation coverage
             st.markdown("---")
             _debts = st.expander("Debts & Risk (Optional)", expanded=False)
@@ -1091,6 +1103,20 @@ def main():
                     "Check any benefit types that apply, then specify the annual dollar value and methodology. "
                     "Only checked benefits are included in the calculations."
                 )
+
+            # Local list of selectable benefit categories
+            BENEFIT_CATEGORIES = [
+                ("Revenue Acceleration", "rev"),
+                ("Customer Satisfaction / Net Promoter Score (NPS)", "nps"),
+                ("Deployment Speed", "deploy"),
+                ("Compliance / Audit Savings", "compliance"),
+                ("Security Risk Reduction", "security"),
+                ("Time-to-Market", "ttm"),
+                ("Competitive Advantage", "competitive"),
+                ("Employee Retention", "retention"),
+                ("Reduced 3rd party support spend", "thirdparty_support"),
+                ("Other", "other"),
+            ]
 
             benefit_inputs: List[Dict[str, Any]] = []
 
@@ -2041,6 +2067,8 @@ def main():
                 automation_description=automation_description,
                 solution_details_md=solution_details_md,
                 out_of_scope=out_of_scope,
+                vol_cost_methodology=vol_cost_methodology_text,
+                acq_methodology=acq_methodology_text,
                 switches_per_location=switches_per_location,
                 num_locations=num_locations,
                 total_switches=total_switches,
@@ -2120,6 +2148,8 @@ def main():
                     "automation_description": automation_description,
                     "solution_details_md": solution_details_md,
                     "out_of_scope": out_of_scope,
+                    "vol_cost_methodology": vol_cost_methodology_text,
+                    "acq_methodology": acq_methodology_text,
                     "switches_per_location": switches_per_location,
                     "num_locations": num_locations,
                     "total_switches": total_switches,
