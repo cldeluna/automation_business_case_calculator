@@ -186,6 +186,7 @@ def build_markdown_report(
     csat_debt_base_annual: Optional[float],
     csat_debt_impact_pct: Optional[float],
     csat_debt_residual_pct: Optional[float],
+    appendix_md: str,
 ) -> str:
     """
     Build a markdown report with a CXO-ready story but using the engineer inputs.
@@ -480,6 +481,9 @@ Based on this {years}-year model:
 
 **Ask:** Approve funding of **${project_cost:,.2f} USD** for the initial automation delivery, with an ongoing budget of **${annual_run_cost:,.2f} USD/year** for run and maintenance, to secure the time, risk, and customer-impact benefits quantified above.
 """
+    # Append Appendix if provided
+    if appendix_md.strip():
+        report = report + "\n---\n\n## Appendix: Calculation Breakdown\n\n" + appendix_md.strip() + "\n"
     return report
 
 
@@ -1643,6 +1647,72 @@ def main():
             fig4 = utils.fig_waterfall(cash_flows)
             st.plotly_chart(fig4, use_container_width=True)
 
+        # --- Appendix: Calculation Breakdown ---
+        appendix_lines = []
+        appendix_lines.append("### Inputs and selections")
+        appendix_lines.append(f"- Years modeled: `{years_list}`")
+        appendix_lines.append(f"- Changes per year: `{tasks_per_year:,.0f}` (from sidebar 'Changes per month' × 12)")
+        appendix_lines.append(f"- Automation coverage: `{automation_coverage_pct:.1f}%` (sidebar)")
+        appendix_lines.append(f"- Engineer fully-loaded cost: `${hourly_rate:,.2f}`/hour (sidebar)")
+        appendix_lines.append(f"- Acquisition strategy: `{acquisition_strategy}` (sidebar)")
+        appendix_lines.append(f"- One-time project cost (Y0): `${project_cost:,.2f}` (from selected strategy inputs)")
+        appendix_lines.append(f"- Annual run cost (base): `${annual_run_cost:,.2f}` (from selected strategy inputs)")
+
+        if benefit_inputs:
+            appendix_lines.append("\n### Additional benefits (checked categories)")
+            for b in benefit_inputs:
+                appendix_lines.append(f"- {b.get('category','Benefit')}: `${b.get('annual_value',0.0):,.2f}`/yr — methodology: {b.get('methodology','') or 'Not documented'}")
+        else:
+            appendix_lines.append("\n### Additional benefits (none selected)")
+
+        appendix_lines.append("\n### Time savings")
+        appendix_lines.append(f"- Manual total minutes per change: `{manual_total_minutes:.1f}` (sum of 8 manual step inputs)")
+        appendix_lines.append(f"- Automated total minutes per change: `{auto_total_minutes:.1f}` (sum of 8 automated step inputs)")
+        appendix_lines.append(f"- Minutes saved per change: `manual − automated = {manual_total_minutes:.1f} − {auto_total_minutes:.1f} = {minutes_saved_per_change:.1f}`")
+        appendix_lines.append(f"- Hours saved per change: `minutes_saved ÷ 60 = {minutes_saved_per_change:.1f} ÷ 60 = {hours_saved_per_change:.4f}`")
+        appendix_lines.append(f"- Effective automated changes/year: `tasks_per_year × automation% = {tasks_per_year:,.0f} × {automation_coverage_pct/100:.2f} = {effective_changes_per_year:,.0f}`")
+        appendix_lines.append(f"- Annual hours saved: `hours_saved_per_change × effective_changes_per_year = {hours_saved_per_change:.4f} × {effective_changes_per_year:,.0f} = {annual_hours_saved:,.2f}`")
+        appendix_lines.append(f"- Annual cost savings (time): `annual_hours_saved × hourly_rate = {annual_hours_saved:,.2f} × {hourly_rate:,.2f} = {annual_cost_savings:,.2f}`")
+
+        appendix_lines.append("\n### Benefits and costs aggregation")
+        appendix_lines.append(f"- Sum of additional benefits: `{annual_additional_benefits:,.2f}` (sum of checked categories)")
+        appendix_lines.append(f"- Total annual benefit: `time_savings + additional = {annual_cost_savings:,.2f} + {annual_additional_benefits:,.2f} = {annual_total_benefit:,.2f}`")
+
+        if include_tech_debt:
+            appendix_lines.append("\n#### Technical debt application")
+            appendix_lines.append(f"- Base annual tech debt at 100%: `${(tech_debt_base_annual or 0):,.2f}`")
+            appendix_lines.append(f"- Impact applied (1 − automation%): `{1 - automation_coverage_pct/100:.2f}` → annual applied: `${(tech_debt_base_annual or 0)*(1 - automation_coverage_pct/100):,.2f}`")
+            if tech_debt_residual_pct is not None:
+                appendix_lines.append(f"- Residual after remediation: `{tech_debt_residual_pct:.0f}%` → annual after remediation: `${tech_debt_annual_after:,.2f}`; one-time remediation: `${tech_debt_remediation_one_time:,.2f}`")
+            else:
+                appendix_lines.append(f"- Annual applied (no remediation): `${tech_debt_annual_after:,.2f}`")
+
+        if include_csat_debt:
+            appendix_lines.append("\n#### Customer Satisfaction (CSAT) debt application")
+            appendix_lines.append(f"- Base annual CSAT debt at 100%: `${(csat_debt_base_annual or 0):,.2f}`")
+            appendix_lines.append(f"- Impact applied (1 − automation%): `{1 - automation_coverage_pct/100:.2f}` → annual applied: `${(csat_debt_base_annual or 0)*(1 - automation_coverage_pct/100):,.2f}`")
+            if csat_debt_residual_pct is not None:
+                appendix_lines.append(f"- Residual after remediation: `{csat_debt_residual_pct:.0f}%` → annual after remediation: `${csat_debt_annual_after:,.2f}`; one-time remediation: `${csat_debt_remediation_one_time:,.2f}`")
+            else:
+                appendix_lines.append(f"- Annual applied (no remediation): `${csat_debt_annual_after:,.2f}`")
+
+        appendix_lines.append("\n### Annual net benefit and cash flows")
+        appendix_lines.append(f"- Annual run cost (effective): `base run + tech debt + CSAT debt = {annual_run_cost:,.2f} + {tech_debt_annual_after:,.2f} + {csat_debt_annual_after:,.2f} = {annual_run_cost_effective:,.2f}`")
+        appendix_lines.append(f"- Annual net benefit: `total annual benefit − annual run cost = {annual_total_benefit:,.2f} − {annual_run_cost_effective:,.2f} = {annual_net_benefit:,.2f}`")
+        appendix_lines.append(f"- Project cost (effective, Year 0): `project + remediation = {project_cost - (tech_debt_remediation_one_time + csat_debt_remediation_one_time):,.2f} + {tech_debt_remediation_one_time + csat_debt_remediation_one_time:,.2f} = {project_cost:,.2f}`")
+        appendix_lines.append(f"- Cash flows: `Y0 = −{project_cost:,.2f}`, then `Y1..Y{years_list} = {annual_net_benefit:,.2f}` each year")
+
+        appendix_lines.append("\n### Discounting and metrics")
+        appendix_lines.append(f"- Discount rate (hurdle): `{discount_rate_pct:.1f}%` (sidebar)")
+        appendix_lines.append(f"- NPV: `Σ CF_t ÷ (1+r)^t` = `{npv:,.2f}`")
+        appendix_lines.append(f"- Payback (undiscounted): `{payback_text}`")
+        appendix_lines.append(f"- IRR: `{irr_text}`")
+
+        appendix_md = "\n".join(appendix_lines)
+
+        with st.expander("Appendix: Calculation Breakdown", expanded=False):
+            st.markdown(appendix_md)
+
         st.subheader("Cumulative Cash Flow Checkpoints")
         st.write(f"**After 1 year:** ${cum_1:,.2f} USD")
         st.write(f"**After 3 years:** ${cum_3:,.2f} USD")
@@ -1813,6 +1883,7 @@ def main():
             csat_debt_base_annual=csat_debt_base_annual,
             csat_debt_impact_pct=csat_debt_impact_pct,
             csat_debt_residual_pct=csat_debt_residual_pct,
+            appendix_md=appendix_md,
         )
 
         st.markdown("---")
@@ -1892,6 +1963,8 @@ def main():
                 "cum_1": cum_1,
                 "cum_3": cum_3,
                 "cum_5": cum_5,
+                # Appendix
+                "appendix_md": appendix_md,
             }
 
         scenario_json_str = json.dumps(build_scenario_payload(), indent=2)
