@@ -700,18 +700,30 @@ def main():
     def _md_line(text: str) -> str:
         return f"- {text}" if text else ""
 
+    def _is_meaningful(text: str) -> bool:
+        if not text:
+            return False
+        t = text.strip().lower()
+        if "tbd" in t:
+            return False
+        default_placeholders = {
+            "no additional gating logic beyond the defined go/no-go criteria.",
+            "this solution will not employ a distinct orchestration layer.",
+        }
+        return t not in default_placeholders
+
     any_content = False
 
     pres = payload.get("presentation", {})
     if pres:
         sec_lines = []
-        if pres.get("users"):
+        if pres.get("users") and _is_meaningful(pres.get("users")):
             sec_lines.append(_md_line(pres.get("users")))
-        if pres.get("interaction"):
+        if pres.get("interaction") and _is_meaningful(pres.get("interaction")):
             sec_lines.append(_md_line(pres.get("interaction")))
-        if pres.get("tools"):
+        if pres.get("tools") and _is_meaningful(pres.get("tools")):
             sec_lines.append(_md_line(pres.get("tools")))
-        if pres.get("auth"):
+        if pres.get("auth") and _is_meaningful(pres.get("auth")):
             sec_lines.append(_md_line(pres.get("auth")))
         if sec_lines:
             any_content = True
@@ -721,9 +733,9 @@ def main():
     intent = payload.get("intent", {})
     if intent:
         sec_lines = []
-        if intent.get("development"):
+        if intent.get("development") and _is_meaningful(intent.get("development")):
             sec_lines.append(_md_line(intent.get("development")))
-        if intent.get("provided"):
+        if intent.get("provided") and _is_meaningful(intent.get("provided")):
             sec_lines.append(_md_line(intent.get("provided")))
         if sec_lines:
             any_content = True
@@ -733,13 +745,13 @@ def main():
     obs = payload.get("observability", {})
     if obs:
         sec_lines = []
-        if obs.get("methods"):
+        if obs.get("methods") and _is_meaningful(obs.get("methods")):
             sec_lines.append(_md_line(obs.get("methods")))
-        if obs.get("go_no_go"):
+        if obs.get("go_no_go") and _is_meaningful(obs.get("go_no_go")):
             sec_lines.append(_md_line(obs.get("go_no_go")))
-        if obs.get("additional_logic"):
+        if obs.get("additional_logic") and _is_meaningful(obs.get("additional_logic")):
             sec_lines.append(_md_line(obs.get("additional_logic")))
-        if obs.get("tools"):
+        if obs.get("tools") and _is_meaningful(obs.get("tools")):
             sec_lines.append(_md_line(obs.get("tools")))
         if sec_lines:
             any_content = True
@@ -749,7 +761,7 @@ def main():
     orch = payload.get("orchestration", {})
     if orch:
         sec_lines = []
-        if orch.get("summary"):
+        if orch.get("summary") and _is_meaningful(orch.get("summary")):
             sec_lines.append(_md_line(orch.get("summary")))
         if sec_lines:
             any_content = True
@@ -759,7 +771,7 @@ def main():
     executor = payload.get("executor", {})
     if executor:
         sec_lines = []
-        if executor.get("methods"):
+        if executor.get("methods") and _is_meaningful(executor.get("methods")):
             sec_lines.append(_md_line(executor.get("methods")))
         if sec_lines:
             any_content = True
@@ -769,15 +781,15 @@ def main():
     collector = payload.get("collector", {})
     if collector:
         sec_lines = []
-        if collector.get("methods"):
+        if collector.get("methods") and _is_meaningful(collector.get("methods")):
             sec_lines.append(_md_line(collector.get("methods")))
-        if collector.get("auth"):
+        if collector.get("auth") and _is_meaningful(collector.get("auth")):
             sec_lines.append(_md_line(collector.get("auth")))
-        if collector.get("handling"):
+        if collector.get("handling") and _is_meaningful(collector.get("handling")):
             sec_lines.append(_md_line(collector.get("handling")))
-        if collector.get("normalization"):
+        if collector.get("normalization") and _is_meaningful(collector.get("normalization")):
             sec_lines.append(_md_line(collector.get("normalization")))
-        if collector.get("scale"):
+        if collector.get("scale") and _is_meaningful(collector.get("scale")):
             sec_lines.append(_md_line(collector.get("scale")))
         if sec_lines:
             any_content = True
@@ -785,21 +797,22 @@ def main():
             st.markdown("\n".join(sec_lines))
 
     if not any_content:
-        st.info("Selections will appear here as you configure each block.")
+        st.info("Work through the Automation Framework functions/layers to see highlights here.")
 
-    # Final download (all blocks)
-    st.markdown("---")
-    st.subheader("Export Solution Wizard")
-    final_payload = payload
-    final_json_bytes = json.dumps(final_payload, indent=2).encode("utf-8")
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    st.download_button(
-        label="Download Wizard JSON",
-        data=final_json_bytes,
-        file_name=f"solution_wizard_{ts}.json",
-        mime="application/json",
-        use_container_width=True,
-    )
+    # Final download (all blocks) — only when there is meaningful content
+    if any_content:
+        st.markdown("---")
+        st.subheader("Export Solution Wizard")
+        final_payload = payload
+        final_json_bytes = json.dumps(final_payload, indent=2).encode("utf-8")
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        st.download_button(
+            label="Download Wizard JSON",
+            data=final_json_bytes,
+            file_name=f"solution_wizard_{ts}.json",
+            mime="application/json",
+            use_container_width=True,
+        )
 
 
 if __name__ == "__main__":
