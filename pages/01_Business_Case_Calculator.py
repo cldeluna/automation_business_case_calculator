@@ -11,22 +11,6 @@ __copyright__ = "Copyright (c) 2025 Claudia"
 __license__ = "Python"
 
 
-"""
-Network Automation Business Case – Streamlit page
-
-This page implements the end-to-end Business Case Calculator UI and reporting
-pipeline. It includes:
-- Financial helpers (payback, IRR) used by the page
-- NABCD(E) summary builder
-- Comprehensive Markdown report builder
-- Hoisted local helpers for scenario access and category normalization
-- Streamlit layout with two tabs: Business Case (main flow) and Arithmetic Calculator (embedded)
-
-Outputs include key metrics (NPV, IRR, Payback), visualizations, a copy/paste
-NABCD(E) summary, an Appendix breakdown, and downloadable artifacts (Markdown
-report, scenario JSON, and PNG charts).
-"""
-
 import utils
 
 import streamlit as st
@@ -36,6 +20,23 @@ import json
 from io import BytesIO
 import zipfile
 
+
+def script_description():
+    """
+    Network Automation Business Case – Streamlit page
+
+    This page implements the end-to-end Business Case Calculator UI and reporting
+    pipeline. It includes:
+    - Financial helpers (payback, IRR) used by the page
+    - NABCD(E) summary builder
+    - Comprehensive Markdown report builder
+    - Hoisted local helpers for scenario access and category normalization
+    - Streamlit layout with two tabs: Business Case (main flow) and Arithmetic Calculator (embedded)
+
+    Outputs include key metrics (NPV, IRR, Payback), visualizations, a copy/paste
+    NABCD(E) summary, an Appendix breakdown, and downloadable artifacts (Markdown
+    report, scenario JSON, and PNG charts).
+    """
 
 # ---------- Financial helper functions ----------
 
