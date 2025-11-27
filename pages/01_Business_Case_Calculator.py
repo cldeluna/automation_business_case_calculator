@@ -38,6 +38,7 @@ def script_description():
     report, scenario JSON, and PNG charts).
     """
 
+
 # ---------- Financial helper functions ----------
 
 
@@ -674,7 +675,8 @@ def main():
 
     st.title("Network Automation Business Case Calculator")
     st.caption(
-        "Automation Business Case content appears below. Use the Calculator tab for quick arithmetic calculations.")
+        "Automation Business Case content appears below. Use the Calculator tab for quick arithmetic calculations."
+    )
     # --- Tabs ---
     tab_bc, tab_calc = st.tabs(["Business Case", "Calculator"])
     with tab_bc:
@@ -923,7 +925,11 @@ def main():
                         "timing": "One-time",
                         "amount": buy_integration_cost,
                     },
-                    {"name": "Training", "timing": "One-time", "amount": buy_training_cost},
+                    {
+                        "name": "Training",
+                        "timing": "One-time",
+                        "amount": buy_training_cost,
+                    },
                     {
                         "name": "Ongoing support & maintenance",
                         "timing": "Annual",
@@ -951,7 +957,9 @@ def main():
 
             else:  # Build in-house
                 with _acq:
-                    st.caption("Specify one-time and ongoing costs for building in-house.")
+                    st.caption(
+                        "Specify one-time and ongoing costs for building in-house."
+                    )
                     st.markdown("**One-time costs**")
                 with _acq:
                     build_dev_effort = st.number_input(
@@ -983,7 +991,9 @@ def main():
                         step=1000.0,
                     )
 
-                project_cost = build_dev_effort + build_opportunity + build_training_cost
+                project_cost = (
+                    build_dev_effort + build_opportunity + build_training_cost
+                )
                 annual_run_cost = build_ongoing_support
 
                 # Itemized breakdown for report/UI
@@ -1241,7 +1251,9 @@ def main():
                 st.write(f"- One-time project cost (Year 0): ${project_cost:,.0f}")
                 st.write(f"- Annual run cost (per year): ${annual_run_cost:,.0f}")
                 if include_tech_debt:
-                    st.write(f"- Technical debt (annual): ${tech_debt_annual_after:,.0f}")
+                    st.write(
+                        f"- Technical debt (annual): ${tech_debt_annual_after:,.0f}"
+                    )
                     if tech_debt_remediation_one_time:
                         st.write(
                             f"- Technical debt remediation (one-time): ${tech_debt_remediation_one_time:,.0f}"
@@ -1319,7 +1331,9 @@ def main():
                         manual_days = _ben.number_input(
                             f"{label} – Manual duration (days)",
                             min_value=0.0,
-                            value=float(pre_b.get("manual_days", 5.0)) if pre_b else 5.0,
+                            value=(
+                                float(pre_b.get("manual_days", 5.0)) if pre_b else 5.0
+                            ),
                             step=0.5,
                             key=f"{key}_manual_days",
                         )
@@ -1334,7 +1348,9 @@ def main():
                             f"{label} – Sites/projects per year impacted",
                             min_value=0.0,
                             value=(
-                                float(pre_b.get("sites_per_year", 12.0)) if pre_b else 12.0
+                                float(pre_b.get("sites_per_year", 12.0))
+                                if pre_b
+                                else 12.0
                             ),
                             step=1.0,
                             key=f"{key}_sites_per_year",
@@ -1378,7 +1394,9 @@ def main():
                         float(pre_b.get("annual_value"))
                         if pre_b and pre_b.get("annual_value") is not None
                         else (
-                            float(suggested_value) if suggested_value is not None else 0.0
+                            float(suggested_value)
+                            if suggested_value is not None
+                            else 0.0
                         )
                     )
 
@@ -1419,7 +1437,9 @@ def main():
                     nm = b.get("name", cat)
                     amt = float(b.get("annual_value", 0.0))
                     st.write(f"- {nm} ({cat}): ${amt:,.0f}/year")
-                total_addl = sum(float(b.get("annual_value", 0.0)) for b in benefit_inputs)
+                total_addl = sum(
+                    float(b.get("annual_value", 0.0)) for b in benefit_inputs
+                )
                 st.info(f"Total of additional benefits: ${total_addl:,.0f}/year")
                 st.caption("Sign convention: benefits are positive (+ returns).")
             else:
@@ -1447,7 +1467,9 @@ def main():
                 for idx, cat in enumerate(categories):
                     nm = cat.get("name", f"Category {idx+1}")
                     checked = _soft.checkbox(
-                        nm, key=f"soft_ben_{idx}", value=(nm.strip().lower() in loaded_soft)
+                        nm,
+                        key=f"soft_ben_{idx}",
+                        value=(nm.strip().lower() in loaded_soft),
                     )
                     if checked:
                         soft_benefits_selected.append(
@@ -1604,7 +1626,8 @@ def main():
             )
         with tcol2:
             st.metric(
-                label="Total automated minutes per change", value=f"{auto_total_preview}"
+                label="Total automated minutes per change",
+                value=f"{auto_total_preview}",
             )
 
         if st.button("Calculate Business Case"):
@@ -1639,7 +1662,9 @@ def main():
             effective_changes_per_year = tasks_per_year * automation_coverage
             annual_hours_saved = hours_saved_per_change * effective_changes_per_year
 
-            annual_cost_savings = annual_hours_saved * hourly_rate  # engineer-time savings
+            annual_cost_savings = (
+                annual_hours_saved * hourly_rate
+            )  # engineer-time savings
 
             # --- Additional benefits (sum only checked ones) ---
 
@@ -1652,7 +1677,9 @@ def main():
 
             # Net after run cost
             # Adjust costs with technical debt if included
-            project_cost += tech_debt_remediation_one_time + csat_debt_remediation_one_time
+            project_cost += (
+                tech_debt_remediation_one_time + csat_debt_remediation_one_time
+            )
             annual_run_cost_effective = (
                 annual_run_cost + tech_debt_annual_after + csat_debt_annual_after
             )
@@ -1710,7 +1737,9 @@ def main():
                 )
                 if automation_description.strip():
                     st.write(f"**Description:** {automation_description}")
-                st.write(f"**Switches per location (avg):** {switches_per_location:,.1f}")
+                st.write(
+                    f"**Switches per location (avg):** {switches_per_location:,.1f}"
+                )
                 st.write(f"**Locations impacted:** {num_locations:,.0f}")
                 st.write(f"**Estimated total switches/devices:** {total_switches:,.0f}")
                 st.write(f"**Changes per year:** {tasks_per_year:,.0f} changes/year")
@@ -1728,7 +1757,9 @@ def main():
                     f"**Time saved per change:** {minutes_saved_per_change:.1f} minutes/change"
                 )
 
-                st.write(f"**Annual hours saved:** {annual_hours_saved:,.1f} hours/year")
+                st.write(
+                    f"**Annual hours saved:** {annual_hours_saved:,.1f} hours/year"
+                )
 
             with mcol2:
                 st.write("**Annual benefit breakdown:**")
@@ -1746,7 +1777,9 @@ def main():
                 st.write(
                     f"**➕ Total annual benefit:** ${annual_total_benefit:,.2f} USD/year"
                 )
-                st.write(f"**Annual run cost:** ${annual_run_cost_effective:,.2f} USD/year")
+                st.write(
+                    f"**Annual run cost:** ${annual_run_cost_effective:,.2f} USD/year"
+                )
                 st.write(f"**Annual net benefit:** ${annual_net_benefit:,.2f} USD/year")
                 st.write(f"**Initial project cost (Year 0):** ${project_cost:,.2f} USD")
                 st.write(f"**Discount rate:** {discount_rate_pct:.1f}%")
@@ -1882,7 +1915,9 @@ def main():
                 fig3 = utils.fig_cumulative_cash_flow(cash_flows, payback)
                 st.plotly_chart(fig3, use_container_width=True)
 
-            with st.expander(f"Cash Flow Waterfall (Y0..Y{years_list})", expanded=False):
+            with st.expander(
+                f"Cash Flow Waterfall (Y0..Y{years_list})", expanded=False
+            ):
                 fig4 = utils.fig_waterfall(cash_flows)
                 st.plotly_chart(fig4, use_container_width=True)
 
@@ -1915,7 +1950,10 @@ def main():
                 for name, _ in one_time_items
             ):
                 one_time_items.append(
-                    ("Technical debt remediation", float(tech_debt_remediation_one_time))
+                    (
+                        "Technical debt remediation",
+                        float(tech_debt_remediation_one_time),
+                    )
                 )
             if (csat_debt_remediation_one_time or 0) > 0 and not any(
                 name.lower().startswith("csat debt remediation")
@@ -1925,7 +1963,9 @@ def main():
                     ("CSAT debt remediation", float(csat_debt_remediation_one_time))
                 )
             if one_time_items:
-                appendix_lines.append(f"- One-time project cost (Y0): ${project_cost:,.2f}")
+                appendix_lines.append(
+                    f"- One-time project cost (Y0): ${project_cost:,.2f}"
+                )
                 appendix_lines.append("  - Components:")
                 for name, amt in one_time_items:
                     appendix_lines.append(f"    - {name}: ${amt:,.2f}")
@@ -2262,7 +2302,9 @@ def main():
                 cost_breakdown=cost_breakdown,
                 tech_debt_included=bool(
                     include_tech_debt
-                    and (tech_debt_annual_after > 0 or tech_debt_remediation_one_time > 0)
+                    and (
+                        tech_debt_annual_after > 0 or tech_debt_remediation_one_time > 0
+                    )
                 ),
                 tech_debt_reduction_pct=tech_reduction_pct,
                 tech_debt_base_annual=tech_debt_base_annual,
@@ -2270,7 +2312,9 @@ def main():
                 tech_debt_residual_pct=tech_debt_residual_pct,
                 csat_debt_included=bool(
                     include_csat_debt
-                    and (csat_debt_annual_after > 0 or csat_debt_remediation_one_time > 0)
+                    and (
+                        csat_debt_annual_after > 0 or csat_debt_remediation_one_time > 0
+                    )
                 ),
                 csat_debt_base_annual=csat_debt_base_annual,
                 csat_debt_impact_pct=csat_debt_impact_pct,
@@ -2403,7 +2447,9 @@ def main():
             markdown_report_with_images = "".join(md_with_images_lines)
 
             zip_buffer = BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            with zipfile.ZipFile(
+                zip_buffer, "w", compression=zipfile.ZIP_DEFLATED
+            ) as zf:
                 zf.writestr(
                     f"BusinessCaseReport_{slug}_{ts}.md", markdown_report_with_images
                 )
@@ -2443,9 +2489,15 @@ def main():
         st.caption("Powered by calculator.net – opens inline.")
         try:
             import streamlit.components.v1 as components
-            components.iframe("https://www.calculator.net/math-calculator.html", height=700)
+
+            components.iframe(
+                "https://www.calculator.net/math-calculator.html", height=700
+            )
         except Exception:
-            st.link_button("Open Calculator in new tab", "https://www.calculator.net/math-calculator.html")
+            st.link_button(
+                "Open Calculator in new tab",
+                "https://www.calculator.net/math-calculator.html",
+            )
 
 
 # Standard call to the main() function.
