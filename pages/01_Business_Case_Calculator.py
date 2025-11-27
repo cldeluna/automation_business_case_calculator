@@ -488,7 +488,12 @@ Based on this {years}-year model:
 """
     # Append Appendix if provided
     if appendix_md.strip():
-        report = report + "\n---\n\n## Appendix: Calculation Breakdown\n\n" + appendix_md.strip() + "\n"
+        report = (
+            report
+            + "\n---\n\n## Appendix: Calculation Breakdown\n\n"
+            + appendix_md.strip()
+            + "\n"
+        )
     return report
 
 
@@ -541,15 +546,21 @@ def main():
         return None
 
     with st.expander("Load a saved scenario (JSON)", expanded=False):
-        enable_load = st.checkbox("Load scenario JSON", value=False, key="load_scn_toggle")
+        enable_load = st.checkbox(
+            "Load scenario JSON", value=False, key="load_scn_toggle"
+        )
         if enable_load:
-            up = st.file_uploader("Upload scenario JSON", type=["json"], key="scenario_upload")
+            up = st.file_uploader(
+                "Upload scenario JSON", type=["json"], key="scenario_upload"
+            )
             if up is not None:
                 try:
                     data = json.loads(up.read().decode("utf-8"))
                     if isinstance(data, dict):
                         st.session_state["loaded_scenario"] = data
-                        st.success("Scenario loaded. Fields below will use values from the scenario where available.")
+                        st.success(
+                            "Scenario loaded. Fields below will use values from the scenario where available."
+                        )
                     else:
                         st.warning("Uploaded JSON is not an object; ignoring.")
                 except Exception as e:
@@ -606,12 +617,12 @@ def main():
             st.subheader("Volume & Cost Assumptions")
 
             switches_per_location = st.number_input(
-            "Number of switches per location",
-            min_value=0,
-            value=int(sv("switches_per_location", 10)),
-            step=1,
-            help="This can be an average number of network switches (L2 and L3) "
-            "or network devices per location.",
+                "Number of switches per location",
+                min_value=0,
+                value=int(sv("switches_per_location", 10)),
+                step=1,
+                help="This can be an average number of network switches (L2 and L3) "
+                "or network devices per location.",
             )
 
         with _vol_cost:
@@ -651,23 +662,23 @@ def main():
 
         with _vol_cost:
             hourly_rate = st.number_input(
-            "Engineer fully-loaded cost (USD/hour)",
-            min_value=0.0,
-            value=float(sv("hourly_rate", 75.0)),
-            step=5.0,
+                "Engineer fully-loaded cost (USD/hour)",
+                min_value=0.0,
+                value=float(sv("hourly_rate", 75.0)),
+                step=5.0,
             )
 
         with _vol_cost:
             discount_rate_pct = st.number_input(
-            "Discount rate / hurdle rate (%)",
-            min_value=0.0,
-            value=float(sv("discount_rate_pct", 10.0)),
-            step=1.0,
-            help=(
-                "The required annual return used to discount future cash flows (time value of money). "
-                "Used in NPV and as a comparison for IRR. 10% is a common placeholder, "
-                "but verify the standard rate with your finance organization."
-            ),
+                "Discount rate / hurdle rate (%)",
+                min_value=0.0,
+                value=float(sv("discount_rate_pct", 10.0)),
+                step=1.0,
+                help=(
+                    "The required annual return used to discount future cash flows (time value of money). "
+                    "Used in NPV and as a comparison for IRR. 10% is a common placeholder, "
+                    "but verify the standard rate with your finance organization."
+                ),
             )
 
         st.markdown("---")
@@ -679,7 +690,7 @@ def main():
             _default_index = 0 if str(_default_acq).lower().startswith("buy") else 1
             acquisition_strategy = st.radio(
                 "Will you buy a tool or build in-house?",
-                options=["Buy tool(s)", "Build in-house" ],
+                options=["Buy tool(s)", "Build in-house"],
                 index=_default_index,
                 help=(
                     "Buy: pay vendor license(s) and integrate.\n"
@@ -692,34 +703,36 @@ def main():
 
         if acquisition_strategy == "Buy tool(s)":
             with _acq:
-                st.caption("Specify one-time and ongoing costs for buying a tool or tools.")
+                st.caption(
+                    "Specify one-time and ongoing costs for buying a tool or tools."
+                )
                 st.markdown("**One-time costs**")
             with _acq:
                 buy_tool_cost = st.number_input(
-                "Tool license(s) cost – one-time (USD)",
-                min_value=0.0,
-                value=35000.0,
-                step=5000.0,
+                    "Tool license(s) cost – one-time (USD)",
+                    min_value=0.0,
+                    value=35000.0,
+                    step=5000.0,
                 )
             with _acq:
                 buy_integration_cost = st.number_input(
-                "Integration/implementation cost – one-time (USD)",
-                min_value=0.0,
-                value=15000.0,
-                step=5000.0,
+                    "Integration/implementation cost – one-time (USD)",
+                    min_value=0.0,
+                    value=15000.0,
+                    step=5000.0,
                 )
                 buy_training_cost = st.number_input(
-                "Training cost – one-time (USD)",
-                min_value=0.0,
-                value=5000.0,
-                step=1000.0,
+                    "Training cost – one-time (USD)",
+                    min_value=0.0,
+                    value=5000.0,
+                    step=1000.0,
                 )
                 st.markdown("**Ongoing maintenance costs**")
                 buy_ongoing_support = st.number_input(
-                "Ongoing support & maintenance – annual (USD/year)",
-                min_value=0.0,
-                value=6000.0,
-                step=1000.0,
+                    "Ongoing support & maintenance – annual (USD/year)",
+                    min_value=0.0,
+                    value=6000.0,
+                    step=1000.0,
                 )
 
             project_cost = buy_tool_cost + buy_integration_cost + buy_training_cost
@@ -769,32 +782,32 @@ def main():
                 st.markdown("**One-time costs**")
             with _acq:
                 build_dev_effort = st.number_input(
-                "Development effort cost – one-time (USD)",
-                min_value=0.0,
-                value=40000.0,
-                step=5000.0,
-                help="Engineering time (contractors and/or internal allocation).",
+                    "Development effort cost – one-time (USD)",
+                    min_value=0.0,
+                    value=40000.0,
+                    step=5000.0,
+                    help="Engineering time (contractors and/or internal allocation).",
                 )
             with _acq:
                 build_opportunity = st.number_input(
-                "Staff opportunity cost – one-time (USD)",
-                min_value=0.0,
-                value=10000.0,
-                step=2000.0,
-                help="Value of in-house staff not doing BAU (Business as Usual or their 'day job') while building.",
+                    "Staff opportunity cost – one-time (USD)",
+                    min_value=0.0,
+                    value=10000.0,
+                    step=2000.0,
+                    help="Value of in-house staff not doing BAU (Business as Usual or their 'day job') while building.",
                 )
                 build_training_cost = st.number_input(
-                "Training cost – one-time (USD)",
-                min_value=0.0,
-                value=3000.0,
-                step=1000.0,
+                    "Training cost – one-time (USD)",
+                    min_value=0.0,
+                    value=3000.0,
+                    step=1000.0,
                 )
                 st.markdown("**Ongoing maintenance costs**")
                 build_ongoing_support = st.number_input(
-                "Ongoing support & maintenance – annual (USD/year)",
-                min_value=0.0,
-                value=8000.0,
-                step=1000.0,
+                    "Ongoing support & maintenance – annual (USD/year)",
+                    min_value=0.0,
+                    value=8000.0,
+                    step=1000.0,
                 )
 
             project_cost = build_dev_effort + build_opportunity + build_training_cost
@@ -850,12 +863,12 @@ def main():
                 "Technical debt is assumed to impact the non-automated portion of the estate."
             )
             include_tech_debt = st.checkbox(
-            "Include technical debt as an additional annual cost",
-            value=bool(sv("include_tech_debt", False)),
-            help=(
-                "Annual technical debt cost is scaled by (1 − automation%). "
-                "Example: at 80% automation, 20% impact applies."
-            ),
+                "Include technical debt as an additional annual cost",
+                value=bool(sv("include_tech_debt", False)),
+                help=(
+                    "Annual technical debt cost is scaled by (1 − automation%). "
+                    "Example: at 80% automation, 20% impact applies."
+                ),
             )
 
         tech_debt_annual_after = 0.0
@@ -881,7 +894,10 @@ def main():
 
             include_remediation = _debts.checkbox(
                 "This automation includes technical debt remediation",
-                value=bool(sv("tech_debt_remediation_one_time", 0.0) > 0 or sv("tech_debt_residual_pct", None) is not None),
+                value=bool(
+                    sv("tech_debt_remediation_one_time", 0.0) > 0
+                    or sv("tech_debt_residual_pct", None) is not None
+                ),
                 help=(
                     "Adds a one-time remediation cost in Year 0 and optionally reduces the ongoing annual technical debt."
                 ),
@@ -956,7 +972,10 @@ def main():
 
             include_csat_remediation = _debts.checkbox(
                 "This automation includes CSAT debt remediation",
-                value=bool(sv("csat_debt_remediation_one_time", 0.0) > 0 or sv("csat_debt_residual_pct", None) is not None),
+                value=bool(
+                    sv("csat_debt_remediation_one_time", 0.0) > 0
+                    or sv("csat_debt_residual_pct", None) is not None
+                ),
                 help=(
                     "Adds a one-time CSAT remediation cost in Year 0 and optionally reduces the ongoing annual CSAT debt."
                 ),
@@ -1064,7 +1083,9 @@ def main():
 
         for label, key in BENEFIT_CATEGORIES:
             pre_b = benefit_by_category(label)
-            include = _ben.checkbox(label, value=bool(pre_b is not None), key=f"{key}_include")
+            include = _ben.checkbox(
+                label, value=bool(pre_b is not None), key=f"{key}_include"
+            )
             if include:
                 _ben.markdown(f"**{label}**")
 
@@ -1111,14 +1132,20 @@ def main():
                     sites_per_year = _ben.number_input(
                         f"{label} – Sites/projects per year impacted",
                         min_value=0.0,
-                        value=float(pre_b.get("sites_per_year", 12.0)) if pre_b else 12.0,
+                        value=(
+                            float(pre_b.get("sites_per_year", 12.0)) if pre_b else 12.0
+                        ),
                         step=1.0,
                         key=f"{key}_sites_per_year",
                     )
                     value_per_site_day = _ben.number_input(
                         f"{label} – Business value per site per day (USD)",
                         min_value=0.0,
-                        value=float(pre_b.get("value_per_site_day", 1000.0)) if pre_b else 1000.0,
+                        value=(
+                            float(pre_b.get("value_per_site_day", 1000.0))
+                            if pre_b
+                            else 1000.0
+                        ),
                         step=500.0,
                         key=f"{key}_value_per_day",
                         help="Rough value of a site being 'fully live' per day "
@@ -1147,8 +1174,11 @@ def main():
                     )
 
                 annual_value_default = (
-                    float(pre_b.get("annual_value")) if pre_b and pre_b.get("annual_value") is not None
-                    else (float(suggested_value) if suggested_value is not None else 0.0)
+                    float(pre_b.get("annual_value"))
+                    if pre_b and pre_b.get("annual_value") is not None
+                    else (
+                        float(suggested_value) if suggested_value is not None else 0.0
+                    )
                 )
 
                 annual_value = _ben.number_input(
@@ -1205,7 +1235,9 @@ def main():
             categories = soft_data.get("categories", [])
             loaded_soft = set()
             try:
-                for sb in (st.session_state.get("loaded_scenario", {}) or {}).get("soft_benefits", []) or []:
+                for sb in (st.session_state.get("loaded_scenario", {}) or {}).get(
+                    "soft_benefits", []
+                ) or []:
                     nm = str(sb.get("name", "")).strip()
                     if nm:
                         loaded_soft.add(nm.lower())
@@ -1656,84 +1688,157 @@ def main():
         appendix_lines = []
         appendix_lines.append("### Inputs and selections")
         appendix_lines.append(f"- Years modeled: `{years_list}`")
-        appendix_lines.append(f"- Changes per year: `{tasks_per_year:,.0f}` (from sidebar 'Changes per month ({tasks_per_month:g})' × 12)")
-        appendix_lines.append(f"- Automation coverage: `{automation_coverage_pct:.1f}%` (sidebar)")
-        appendix_lines.append(f"- Engineer fully-loaded cost: `${hourly_rate:,.2f}`/hour (sidebar)")
-        appendix_lines.append(f"- Acquisition strategy: `{acquisition_strategy}` (sidebar)")
+        appendix_lines.append(
+            f"- Changes per year: `{tasks_per_year:,.0f}` (from sidebar 'Changes per month ({tasks_per_month:g})' × 12)"
+        )
+        appendix_lines.append(
+            f"- Automation coverage: `{automation_coverage_pct:.1f}%` (sidebar)"
+        )
+        appendix_lines.append(
+            f"- Engineer fully-loaded cost: `${hourly_rate:,.2f}`/hour (sidebar)"
+        )
+        appendix_lines.append(
+            f"- Acquisition strategy: `{acquisition_strategy}` (sidebar)"
+        )
         # Build a numeric breakdown for one-time project cost using itemized one-time costs
         one_time_items = [
             (str(it.get("name", "One-time")), float(it.get("amount", 0.0)))
             for it in (cost_breakdown or [])
-            if str(it.get("timing", "")).lower() == "one-time" and float(it.get("amount", 0.0)) > 0
+            if str(it.get("timing", "")).lower() == "one-time"
+            and float(it.get("amount", 0.0)) > 0
         ]
         # Ensure remediation items show up if not already in cost_breakdown
         if (tech_debt_remediation_one_time or 0) > 0 and not any(
-            name.lower().startswith("technical debt remediation") for name, _ in one_time_items
+            name.lower().startswith("technical debt remediation")
+            for name, _ in one_time_items
         ):
-            one_time_items.append(("Technical debt remediation", float(tech_debt_remediation_one_time)))
+            one_time_items.append(
+                ("Technical debt remediation", float(tech_debt_remediation_one_time))
+            )
         if (csat_debt_remediation_one_time or 0) > 0 and not any(
-            name.lower().startswith("csat debt remediation") for name, _ in one_time_items
+            name.lower().startswith("csat debt remediation")
+            for name, _ in one_time_items
         ):
-            one_time_items.append(("CSAT debt remediation", float(csat_debt_remediation_one_time)))
+            one_time_items.append(
+                ("CSAT debt remediation", float(csat_debt_remediation_one_time))
+            )
         if one_time_items:
             appendix_lines.append(f"- One-time project cost (Y0): ${project_cost:,.2f}")
             appendix_lines.append("  - Components:")
             for name, amt in one_time_items:
                 appendix_lines.append(f"    - {name}: ${amt:,.2f}")
             appendix_lines.append(
-                "  - Tip: Y0 includes one-time Buy/Build cost items" +
-                (" and remediation costs" if (include_tech_debt and tech_debt_remediation_one_time > 0) or (include_csat_debt and csat_debt_remediation_one_time > 0) else "") + "."
+                "  - Tip: Y0 includes one-time Buy/Build cost items"
+                + (
+                    " and remediation costs"
+                    if (include_tech_debt and tech_debt_remediation_one_time > 0)
+                    or (include_csat_debt and csat_debt_remediation_one_time > 0)
+                    else ""
+                )
+                + "."
             )
         else:
-            appendix_lines.append(f"- One-time project cost (Y0): `${project_cost:,.2f}` (from selected strategy inputs)")
-        appendix_lines.append(f"- Annual run cost (base): `${annual_run_cost:,.2f}` (from selected strategy inputs)")
+            appendix_lines.append(
+                f"- One-time project cost (Y0): `${project_cost:,.2f}` (from selected strategy inputs)"
+            )
+        appendix_lines.append(
+            f"- Annual run cost (base): `${annual_run_cost:,.2f}` (from selected strategy inputs)"
+        )
 
         if benefit_inputs:
             appendix_lines.append("\n### Additional benefits (checked categories)")
             for b in benefit_inputs:
-                appendix_lines.append(f"- {b.get('category','Benefit')}: `${b.get('annual_value',0.0):,.2f}`/yr — methodology: {b.get('methodology','') or 'Not documented'}")
+                appendix_lines.append(
+                    f"- {b.get('category','Benefit')}: `${b.get('annual_value',0.0):,.2f}`/yr — methodology: {b.get('methodology','') or 'Not documented'}"
+                )
         else:
             appendix_lines.append("\n### Additional benefits (none selected)")
 
         appendix_lines.append("\n### Time savings")
-        appendix_lines.append(f"- Manual total minutes per change: `{manual_total_minutes:.1f}` (sum of 8 manual step inputs)")
-        appendix_lines.append(f"- Automated total minutes per change: `{auto_total_minutes:.1f}` (sum of 8 automated step inputs)")
-        appendix_lines.append(f"- Minutes saved per change: `manual − automated = {manual_total_minutes:.1f} − {auto_total_minutes:.1f} = {minutes_saved_per_change:.1f}`")
-        appendix_lines.append(f"- Hours saved per change: `minutes_saved ÷ 60 = {minutes_saved_per_change:.1f} ÷ 60 = {hours_saved_per_change:.4f}`")
-        appendix_lines.append(f"- Effective automated changes/year: `tasks_per_year × automation% = {tasks_per_year:,.0f} × {automation_coverage_pct/100:.2f} = {effective_changes_per_year:,.0f}`")
-        appendix_lines.append(f"- Annual hours saved: `hours_saved_per_change × effective_changes_per_year = {hours_saved_per_change:.4f} × {effective_changes_per_year:,.0f} = {annual_hours_saved:,.2f}`")
-        appendix_lines.append(f"- Annual cost savings (time): `annual_hours_saved × hourly_rate = {annual_hours_saved:,.2f} × {hourly_rate:,.2f} = {annual_cost_savings:,.2f}`")
+        appendix_lines.append(
+            f"- Manual total minutes per change: `{manual_total_minutes:.1f}` (sum of 8 manual step inputs)"
+        )
+        appendix_lines.append(
+            f"- Automated total minutes per change: `{auto_total_minutes:.1f}` (sum of 8 automated step inputs)"
+        )
+        appendix_lines.append(
+            f"- Minutes saved per change: `manual − automated = {manual_total_minutes:.1f} − {auto_total_minutes:.1f} = {minutes_saved_per_change:.1f}`"
+        )
+        appendix_lines.append(
+            f"- Hours saved per change: `minutes_saved ÷ 60 = {minutes_saved_per_change:.1f} ÷ 60 = {hours_saved_per_change:.4f}`"
+        )
+        appendix_lines.append(
+            f"- Effective automated changes/year: `tasks_per_year × automation% = {tasks_per_year:,.0f} × {automation_coverage_pct/100:.2f} = {effective_changes_per_year:,.0f}`"
+        )
+        appendix_lines.append(
+            f"- Annual hours saved: `hours_saved_per_change × effective_changes_per_year = {hours_saved_per_change:.4f} × {effective_changes_per_year:,.0f} = {annual_hours_saved:,.2f}`"
+        )
+        appendix_lines.append(
+            f"- Annual cost savings (time): `annual_hours_saved × hourly_rate = {annual_hours_saved:,.2f} × {hourly_rate:,.2f} = {annual_cost_savings:,.2f}`"
+        )
 
         appendix_lines.append("\n### Benefits and costs aggregation")
-        appendix_lines.append(f"- Sum of additional benefits: `{annual_additional_benefits:,.2f}` (sum of checked categories)")
-        appendix_lines.append(f"- Total annual benefit: `time_savings + additional = {annual_cost_savings:,.2f} + {annual_additional_benefits:,.2f} = {annual_total_benefit:,.2f}`")
+        appendix_lines.append(
+            f"- Sum of additional benefits: `{annual_additional_benefits:,.2f}` (sum of checked categories)"
+        )
+        appendix_lines.append(
+            f"- Total annual benefit: `time_savings + additional = {annual_cost_savings:,.2f} + {annual_additional_benefits:,.2f} = {annual_total_benefit:,.2f}`"
+        )
 
         if include_tech_debt:
             appendix_lines.append("\n#### Technical debt application")
-            appendix_lines.append(f"- Base annual tech debt at 100%: `${(tech_debt_base_annual or 0):,.2f}`")
-            appendix_lines.append(f"- Impact applied (1 − automation%): `{1 - automation_coverage_pct/100:.2f}` → annual applied: `${(tech_debt_base_annual or 0)*(1 - automation_coverage_pct/100):,.2f}`")
+            appendix_lines.append(
+                f"- Base annual tech debt at 100%: `${(tech_debt_base_annual or 0):,.2f}`"
+            )
+            appendix_lines.append(
+                f"- Impact applied (1 − automation%): `{1 - automation_coverage_pct/100:.2f}` → annual applied: `${(tech_debt_base_annual or 0)*(1 - automation_coverage_pct/100):,.2f}`"
+            )
             if tech_debt_residual_pct is not None:
-                appendix_lines.append(f"- Residual after remediation: `{tech_debt_residual_pct:.0f}%` → annual after remediation: `${tech_debt_annual_after:,.2f}`; one-time remediation: `${tech_debt_remediation_one_time:,.2f}`")
+                appendix_lines.append(
+                    f"- Residual after remediation: `{tech_debt_residual_pct:.0f}%` → annual after remediation: `${tech_debt_annual_after:,.2f}`; one-time remediation: `${tech_debt_remediation_one_time:,.2f}`"
+                )
             else:
-                appendix_lines.append(f"- Annual applied (no remediation): `${tech_debt_annual_after:,.2f}`")
+                appendix_lines.append(
+                    f"- Annual applied (no remediation): `${tech_debt_annual_after:,.2f}`"
+                )
 
         if include_csat_debt:
-            appendix_lines.append("\n#### Customer Satisfaction (CSAT) debt application")
-            appendix_lines.append(f"- Base annual CSAT debt at 100%: `${(csat_debt_base_annual or 0):,.2f}`")
-            appendix_lines.append(f"- Impact applied (1 − automation%): `{1 - automation_coverage_pct/100:.2f}` → annual applied: `${(csat_debt_base_annual or 0)*(1 - automation_coverage_pct/100):,.2f}`")
+            appendix_lines.append(
+                "\n#### Customer Satisfaction (CSAT) debt application"
+            )
+            appendix_lines.append(
+                f"- Base annual CSAT debt at 100%: `${(csat_debt_base_annual or 0):,.2f}`"
+            )
+            appendix_lines.append(
+                f"- Impact applied (1 − automation%): `{1 - automation_coverage_pct/100:.2f}` → annual applied: `${(csat_debt_base_annual or 0)*(1 - automation_coverage_pct/100):,.2f}`"
+            )
             if csat_debt_residual_pct is not None:
-                appendix_lines.append(f"- Residual after remediation: `{csat_debt_residual_pct:.0f}%` → annual after remediation: `${csat_debt_annual_after:,.2f}`; one-time remediation: `${csat_debt_remediation_one_time:,.2f}`")
+                appendix_lines.append(
+                    f"- Residual after remediation: `{csat_debt_residual_pct:.0f}%` → annual after remediation: `${csat_debt_annual_after:,.2f}`; one-time remediation: `${csat_debt_remediation_one_time:,.2f}`"
+                )
             else:
-                appendix_lines.append(f"- Annual applied (no remediation): `${csat_debt_annual_after:,.2f}`")
+                appendix_lines.append(
+                    f"- Annual applied (no remediation): `${csat_debt_annual_after:,.2f}`"
+                )
 
         appendix_lines.append("\n### Annual net benefit and cash flows")
-        appendix_lines.append(f"- Annual run cost (effective): `base run + tech debt + CSAT debt = {annual_run_cost:,.2f} + {tech_debt_annual_after:,.2f} + {csat_debt_annual_after:,.2f} = {annual_run_cost_effective:,.2f}`")
-        appendix_lines.append(f"- Annual net benefit: `total annual benefit − annual run cost = {annual_total_benefit:,.2f} − {annual_run_cost_effective:,.2f} = {annual_net_benefit:,.2f}`")
-        appendix_lines.append(f"- Project cost (effective, Year 0): `project + remediation = {project_cost - (tech_debt_remediation_one_time + csat_debt_remediation_one_time):,.2f} + {tech_debt_remediation_one_time + csat_debt_remediation_one_time:,.2f} = {project_cost:,.2f}`")
-        appendix_lines.append(f"- Cash flows: `Y0 = −{project_cost:,.2f}`, then `Y1..Y{years_list} = {annual_net_benefit:,.2f}` each year")
+        appendix_lines.append(
+            f"- Annual run cost (effective): `base run + tech debt + CSAT debt = {annual_run_cost:,.2f} + {tech_debt_annual_after:,.2f} + {csat_debt_annual_after:,.2f} = {annual_run_cost_effective:,.2f}`"
+        )
+        appendix_lines.append(
+            f"- Annual net benefit: `total annual benefit − annual run cost = {annual_total_benefit:,.2f} − {annual_run_cost_effective:,.2f} = {annual_net_benefit:,.2f}`"
+        )
+        appendix_lines.append(
+            f"- Project cost (effective, Year 0): `project + remediation = {project_cost - (tech_debt_remediation_one_time + csat_debt_remediation_one_time):,.2f} + {tech_debt_remediation_one_time + csat_debt_remediation_one_time:,.2f} = {project_cost:,.2f}`"
+        )
+        appendix_lines.append(
+            f"- Cash flows: `Y0 = −{project_cost:,.2f}`, then `Y1..Y{years_list} = {annual_net_benefit:,.2f}` each year"
+        )
 
         appendix_lines.append("\n### Discounting and metrics")
-        appendix_lines.append(f"- Discount rate (hurdle): `{discount_rate_pct:.1f}%` (sidebar)")
+        appendix_lines.append(
+            f"- Discount rate (hurdle): `{discount_rate_pct:.1f}%` (sidebar)"
+        )
         appendix_lines.append(f"- NPV: `Σ CF_t ÷ (1+r)^t` = `{npv:,.2f}`")
         appendix_lines.append(f"- Payback (undiscounted): `{payback_text}`")
         appendix_lines.append(f"- IRR: `{irr_text}`")
@@ -1861,7 +1966,9 @@ def main():
         st.subheader("NABCD(E) Summary (Copy-Paste Ready)")
         # Render with bold headings and plain text bodies
         _desc_block = (
-            f" ({automation_description.strip()})" if automation_description.strip() else ""
+            f" ({automation_description.strip()})"
+            if automation_description.strip()
+            else ""
         )
         st.markdown("**Need** –")
         st.text(
@@ -2064,6 +2171,7 @@ def main():
 
         # Try to render images; if fails (e.g., kaleido missing), skip images gracefully
         images = []  # list of (filename, bytes, alt)
+
         def try_add(name: str, fig):
             try:
                 png = fig.to_image(format="png", scale=2)
@@ -2090,7 +2198,9 @@ def main():
 
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(f"BusinessCaseReport_{slug}_{ts}.md", markdown_report_with_images)
+            zf.writestr(
+                f"BusinessCaseReport_{slug}_{ts}.md", markdown_report_with_images
+            )
             zf.writestr(f"BusinessCaseScenario_{slug}_{ts}.json", scenario_json_str)
             for fname, data, _ in images:
                 zf.writestr(fname, data)
