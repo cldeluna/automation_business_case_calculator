@@ -44,6 +44,20 @@ def main():
     with title_cols[1]:
         st.markdown("**Network Automation Forum's Automation Framework**")
 
+    # Intro: purpose of the wizard and how it relates to the calculator
+    st.markdown(
+        """
+        The Solution Wizard helps you think through your automation project using the Network Automation Forum (NAF) Automation Framework.
+
+        - **Purpose:** Guide structured thinking across the NAF components so you identify stakeholders, scope, data flows, and build/buy/support decisions.
+        - **Optional:** You don't need to complete this wizard to use the Business Case Calculator. If you already worked this out elsewhere and have the inputs, you can skip the wizard.
+        - **Second set of eyes:** Use it as a checklist to ensure you’ve considered all key components; the framework helps make sure nothing critical is missed.
+        - **Authoring aid:** Your selections here can help generate narrative text for the "Detailed solution description (Markdown supported)" field in the calculator.
+
+        Remember: to complete the Business Case Calculator effectively, you should have a clear understanding of what the automation will do, who it will serve, and how it will be built (or bought) and supported going forward.
+        """
+    )
+
     # Framework diagram
     st.image(
         "images/naf_arch_framework_figure.png",
