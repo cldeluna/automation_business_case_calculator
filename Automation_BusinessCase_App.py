@@ -213,6 +213,15 @@ def main():
             """
         )
 
+    with st.expander("Resources", expanded=False):
+        st.subheader("Technical Debt")
+        st.markdown(
+            "- How to measure technical debt: https://ltsgroup.tech/blog/how-to-measure-technical-debt/"
+        )
+        st.markdown(
+            "- How to calculate the cost of tech debt (9 metrics): https://www.pragmaticcoders.com/blog/how-to-calculate-the-cost-of-tech-debt-9-metrics-to-use"
+        )
+
 
 if __name__ == "__main__":
     main()
