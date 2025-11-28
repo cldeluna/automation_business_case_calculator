@@ -839,7 +839,7 @@ def csat_debt_calculator():
     # Qualitative sentiment assumption (place BEFORE inputs so it can set defaults)
     sentiment_options = [
         "Customers mostly happy",
-        "Customers as happy as necessary",
+        "Customer ambivalent",
         "Customers mostly unhappy",
     ]
 
@@ -854,7 +854,7 @@ def csat_debt_calculator():
             return
         if sentiment == "Customers mostly happy":
             p_h, p_n, p_s = 0.60, 0.30, 0.10
-        elif sentiment == "Customers as happy as necessary":
+        elif sentiment == "Customer ambivalent":
             p_h, p_n, p_s = 1 / 3, 1 / 3, 1 / 3
         else:
             p_h, p_n, p_s = 0.10, 0.30, 0.60
@@ -876,6 +876,9 @@ def csat_debt_calculator():
     default_sentiment = st.session_state.get(
         "csat_customer_sentiment", sentiment_options[0]
     )
+    # Normalize legacy label from previous sessions
+    if default_sentiment == "Customers as happy as necessary":
+        default_sentiment = "Customer ambivalent"
     csat_customer_sentiment = st.radio(
         "Customer sentiment assumption",
         options=sentiment_options,
@@ -888,7 +891,7 @@ def csat_debt_calculator():
         help=(
             "Select a preset distribution for Happy/Neutral/Sad.\n"
             "- Customers mostly happy: 60% Happy, 30% Neutral, 10% Sad\n"
-            "- Customers as happy as necessary: 33% Happy, 33% Neutral, 33% Sad\n"
+            "- Customer ambivalent: 33% Happy, 33% Neutral, 33% Sad\n"
             "- Customers mostly unhappy: 10% Happy, 30% Neutral, 60% Sad"
         ),
         key="_csat_customer_sentiment_radio",
@@ -914,7 +917,7 @@ def csat_debt_calculator():
         )
         if sentiment == "Customers mostly happy":
             p_h, p_n, p_s = 0.60, 0.30, 0.10
-        elif sentiment == "Customers as happy as necessary":
+        elif sentiment == "Customer ambivalent":
             p_h, p_n, p_s = 1 / 3, 1 / 3, 1 / 3
         else:
             p_h, p_n, p_s = 0.10, 0.30, 0.60
@@ -940,7 +943,7 @@ def csat_debt_calculator():
         )
         if sentiment == "Customers mostly happy":
             p_h, p_n, p_s = 0.60, 0.30, 0.10
-        elif sentiment == "Customers as happy as necessary":
+        elif sentiment == "Customer ambivalent":
             p_h, p_n, p_s = 1 / 3, 1 / 3, 1 / 3
         else:
             p_h, p_n, p_s = 0.10, 0.30, 0.60
