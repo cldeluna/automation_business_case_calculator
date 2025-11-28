@@ -667,7 +667,363 @@ def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
 
 
 def csat_debt_calculator():
-    st.write("Future Capability")
+    st.subheader("CSAT Debt Calculator")
+    st.caption("Use this calculator to estimate CSAT-related costs and inform the 'Debts & Risk (Optional)' CSAT inputs in the main calculator sidebar.")
+
+    # Top layout: Methodology (left) and image (right)
+    lcol, rcol = st.columns([3, 2])
+    with lcol:
+        st.markdown("**Methodology**")
+        st.markdown(
+            """
+            CES (Customer Effort Score):
+            - CES asks: “How easy was it to fix your problem?”  or alternatively "How hard was it work with us to get your problem fixed?"
+            - CES score (faces): (Happy − Sad) ÷ Total responses
+            - Cost model: assign a cost weight to each response type and sum:  
+              Total Cost = (Happy × w_happy) + (Neutral × w_neutral) + (Sad × w_sad)  
+              Avg Cost/Response = Total Cost ÷ Total responses
+            - Annual CSAT cost estimate: Avg Cost/Response × Responses/Year  
+              where Responses/Year = Changes/Year × Responses/Change
+            - Choose weights to reflect real support effort and business impact. Higher weights represent more friction (rework, escalations, delays). Weights can be adjusted below.
+            """
+        )
+    with rcol:
+        try:
+            st.info("We categorize Customer Effort Score into Happy (Easy), Neutral (Medium), and Sad (Hard) for simplicity.")
+            st.image("images/shutterstock_1639203016-noborder.png", use_container_width=True)
+        except Exception:
+            pass
+
+    # Defaults from main scenario but stored under csat_* keys
+    loaded = st.session_state.get("loaded_scenario", {}) or {}
+    default_year = loaded.get("tasks_per_year") if isinstance(loaded, dict) else None
+    default_cpm_from_scenario = (float(default_year) / 12.0) if default_year else None
+    default_cpm = st.session_state.get("csat_changes_per_month", default_cpm_from_scenario or 10.0)
+    default_hr = st.session_state.get("csat_hourly_rate", loaded.get("hourly_rate", 75.0))
+    default_rpc = st.session_state.get("csat_responses_per_change", 1.0)
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        csat_changes_per_month = st.number_input(
+            "Changes per month (changes/month, default from main)", min_value=0.0, value=float(default_cpm), step=1.0, key="_csat_cpm_input"
+        )
+    with c2:
+        csat_hourly_rate = st.number_input(
+            "Engineer fully-loaded cost (USD/hour)", min_value=0.0, value=float(default_hr), step=1.0, key="_csat_hr_input"
+        )
+    with c3:
+        csat_responses_per_change = st.number_input(
+            "Responses per change (responses/change)",
+            min_value=0.0,
+            value=float(default_rpc),
+            step=0.1,
+            key="_csat_rpc_input",
+            help=(
+                "How many CES responses you typically capture per change/ticket.\n"
+                "Examples: 1 if you send a single CSAT after each change; 2 if you survey both the requester and an impacted user;\n"
+                "use a fractional average (e.g., 1.2) if surveys are not sent every time."
+            ),
+        )
+    with c4:
+        default_rr_pct = float(st.session_state.get("csat_response_rate_pct", 100.0))
+        csat_response_rate_pct = st.number_input(
+            "Survey response rate (%)",
+            min_value=0.0,
+            max_value=100.0,
+            value=default_rr_pct,
+            step=5.0,
+            key="_csat_rr_pct",
+            help="Percent of changes that receive a CSAT response (e.g., 60 = 60% of changes get at least one response).",
+        )
+
+    # Persist CSAT state
+    st.session_state["csat_changes_per_month"] = csat_changes_per_month
+    st.session_state["csat_hourly_rate"] = csat_hourly_rate
+    st.session_state["csat_responses_per_change"] = csat_responses_per_change
+    st.session_state["csat_response_rate_pct"] = csat_response_rate_pct
+
+    # Derived volumes
+    changes_per_year = csat_changes_per_month * 12.0
+    # Show computed changes/year (read-only) for clarity of units
+    st.number_input(
+        "Changes per year (changes/year)",
+        min_value=0.0,
+        value=float(changes_per_year),
+        step=1.0,
+        disabled=True,
+        key="_csat_changes_per_year_display",
+        help="Derived: Changes/month × 12 months",
+    )
+    st.session_state["csat_changes_per_year"] = float(changes_per_year)
+    response_rate = (csat_response_rate_pct or 0.0) / 100.0
+    responses_per_year = changes_per_year * csat_responses_per_change * response_rate
+    # CES responses with expected total (option to auto-calc from inputs)
+    auto_expected = st.checkbox(
+        "Auto-calculate expected responses/year from inputs",
+        value=bool(st.session_state.get("csat_auto_expected", True)),
+        help="When enabled, expected responses/year = (Changes/month × 12) × (Responses/change) × (Response rate % / 100).",
+        key="_csat_auto_expected_toggle",
+    )
+    st.session_state["csat_auto_expected"] = auto_expected
+
+    computed_expected_total = int(round(responses_per_year))
+    if auto_expected:
+        expected_total = computed_expected_total
+        # Display read-only number input for clarity of units
+        st.number_input(
+            "Total expected responses (per year)",
+            min_value=0,
+            value=expected_total,
+            step=1,
+            disabled=True,
+            key="_csat_expected_total_display",
+            help="Derived from the inputs above. Disable auto-calc to override.",
+        )
+        # Persist so downstream UI uses the computed value
+        st.session_state["csat_expected_total"] = expected_total
+    else:
+        manual_default = int(st.session_state.get("csat_expected_total", computed_expected_total))
+        expected_total = st.number_input(
+            "Total expected responses (per year)",
+            min_value=0,
+            value=manual_default if manual_default >= 0 else 0,
+            step=1,
+            key="_csat_expected_total",
+        )
+        st.session_state["csat_expected_total"] = expected_total
+
+    # Always show how the computed expected responses is derived, with units
+    st.caption(
+        f"Computed from inputs: {csat_changes_per_month:,.0f} changes/month × 12 months × "
+        f"{csat_responses_per_change:,.2f} responses/change × {csat_response_rate_pct:,.0f}% response rate = "
+        f"{computed_expected_total:,} responses/year"
+    )
+
+    # If manual override differs from computed, offer one-click sync
+    if not auto_expected and expected_total != computed_expected_total:
+        diff = expected_total - computed_expected_total
+        sign = "+" if diff > 0 else ""
+        st.warning(
+            f"Manual total expected ≠ computed. Manual: {expected_total:,} • Computed: {computed_expected_total:,} (Δ {sign}{diff})."
+        )
+        if st.button("Set expected to computed", help="Replace manual total with the computed value above"):
+            st.session_state["csat_expected_total"] = int(computed_expected_total)
+
+    st.markdown(f"**Customer Effort Score Responses** (Total expected: {expected_total:,} responses/year)")
+
+    # Qualitative sentiment assumption (place BEFORE inputs so it can set defaults)
+    sentiment_options = [
+        "Customers mostly happy",
+        "Customers as happy as necessary",
+        "Customers mostly unhappy",
+    ]
+    # Callback to apply distribution on radio change
+    def _csat_apply_dist_on_change():
+        # Always auto-apply unless manual override is enabled
+        if st.session_state.get("csat_manual_override", False):
+            return
+        sentiment = st.session_state.get("_csat_customer_sentiment_radio")
+        expected = int(st.session_state.get("csat_expected_total", 0))
+        if expected <= 0:
+            return
+        if sentiment == "Customers mostly happy":
+            p_h, p_n, p_s = 0.60, 0.30, 0.10
+        elif sentiment == "Customers as happy as necessary":
+            p_h, p_n, p_s = 1/3, 1/3, 1/3
+        else:
+            p_h, p_n, p_s = 0.10, 0.30, 0.60
+        new_h = int(round(expected * p_h))
+        new_n = int(round(expected * p_n))
+        new_s = int(expected - new_h - new_n)
+        if new_s < 0:
+            new_s = 0
+            new_n = max(0, expected - new_h)
+        # Update persistent counts (widgets will read these via value=)
+        st.session_state["csat_happy_cnt"] = new_h
+        st.session_state["csat_neutral_cnt"] = new_n
+        st.session_state["csat_sad_cnt"] = new_s
+        # Seed widget keys prior to rendering inputs
+        st.session_state["_csat_happy"] = new_h
+        st.session_state["_csat_neutral"] = new_n
+        st.session_state["_csat_sad"] = new_s
+
+    default_sentiment = st.session_state.get("csat_customer_sentiment", sentiment_options[0])
+    csat_customer_sentiment = st.radio(
+        "Customer sentiment assumption",
+        options=sentiment_options,
+        index=sentiment_options.index(default_sentiment) if default_sentiment in sentiment_options else 0,
+        horizontal=True,
+        help=(
+            "Select a preset distribution for Happy/Neutral/Sad.\n"
+            "- Customers mostly happy: 60% Happy, 30% Neutral, 10% Sad\n"
+            "- Customers as happy as necessary: 33% Happy, 33% Neutral, 33% Sad\n"
+            "- Customers mostly unhappy: 10% Happy, 30% Neutral, 60% Sad"
+        ),
+        key="_csat_customer_sentiment_radio",
+        on_change=_csat_apply_dist_on_change,
+    )
+    st.session_state["csat_customer_sentiment"] = csat_customer_sentiment
+
+    # Auto-apply distribution before inputs, no explicit rerun needed (radio change triggers rerun)
+    auto_apply = True
+
+    # Fallback auto-apply: if totals don't match expected, snap to the selected sentiment distribution
+    curr_h = int(st.session_state.get("csat_happy_cnt", 50))
+    curr_n = int(st.session_state.get("csat_neutral_cnt", 30))
+    curr_s = int(st.session_state.get("csat_sad_cnt", 20))
+    if auto_apply and not st.session_state.get("csat_manual_override", False) and (curr_h + curr_n + curr_s) != expected_total:
+        sentiment = st.session_state.get("_csat_customer_sentiment_radio") or csat_customer_sentiment
+        if sentiment == "Customers mostly happy":
+            p_h, p_n, p_s = 0.60, 0.30, 0.10
+        elif sentiment == "Customers as happy as necessary":
+            p_h, p_n, p_s = 1/3, 1/3, 1/3
+        else:
+            p_h, p_n, p_s = 0.10, 0.30, 0.60
+        new_h = int(round(expected_total * p_h))
+        new_n = int(round(expected_total * p_n))
+        new_s = int(expected_total - new_h - new_n)
+        if new_s < 0:
+            new_s = 0
+            new_n = max(0, expected_total - new_h)
+        st.session_state["csat_happy_cnt"] = new_h
+        st.session_state["csat_neutral_cnt"] = new_n
+        st.session_state["csat_sad_cnt"] = new_s
+
+    # Seed defaults for persistent counts if not set yet (initial distribution)
+    if ("csat_happy_cnt" not in st.session_state
+        or "csat_neutral_cnt" not in st.session_state
+        or "csat_sad_cnt" not in st.session_state):
+        sentiment = st.session_state.get("_csat_customer_sentiment_radio") or csat_customer_sentiment
+        if sentiment == "Customers mostly happy":
+            p_h, p_n, p_s = 0.60, 0.30, 0.10
+        elif sentiment == "Customers as happy as necessary":
+            p_h, p_n, p_s = 1/3, 1/3, 1/3
+        else:
+            p_h, p_n, p_s = 0.10, 0.30, 0.60
+        new_h = int(round(expected_total * p_h))
+        new_n = int(round(expected_total * p_n))
+        new_s = int(expected_total - new_h - new_n)
+        if new_s < 0:
+            new_s = 0
+            new_n = max(0, expected_total - new_h)
+        st.session_state["csat_happy_cnt"] = new_h
+        st.session_state["csat_neutral_cnt"] = new_n
+        st.session_state["csat_sad_cnt"] = new_s
+
+    # Manual override toggle
+    st.checkbox(
+        "Manual override (edit counts directly)",
+        key="csat_manual_override",
+        help="When enabled, you can edit Happy/Neutral/Sad directly. When disabled, counts follow the selected sentiment distribution.",
+        value=st.session_state.get("csat_manual_override", False),
+    )
+
+    # Now render the H/N/S inputs using the latest session values
+    col_h, col_n, col_s = st.columns(3)
+    with col_h:
+        happy_cnt = st.number_input(
+            "Happy (Easy)",
+            min_value=0,
+            max_value=expected_total,
+            step=1,
+            key="csat_happy_cnt",
+            disabled=not st.session_state.get("csat_manual_override", False),
+        )
+    with col_n:
+        neutral_cnt = st.number_input(
+            "Neutral (Medium)",
+            min_value=0,
+            max_value=expected_total,
+            step=1,
+            key="csat_neutral_cnt",
+            disabled=not st.session_state.get("csat_manual_override", False),
+        )
+    with col_s:
+        sad_cnt = st.number_input(
+            "Sad (Hard)",
+            min_value=0,
+            max_value=expected_total,
+            step=1,
+            key="csat_sad_cnt",
+            disabled=not st.session_state.get("csat_manual_override", False),
+        )
+
+    actual_total = int(happy_cnt + neutral_cnt + sad_cnt)
+    if actual_total != expected_total:
+        delta = actual_total - expected_total
+        sign = "+" if delta > 0 else ""
+        needed_sad = max(0, int(expected_total - happy_cnt - neutral_cnt))
+        st.error(
+            f"Responses do not match expected. Expected: {expected_total:,} • Actual: {actual_total:,} (Δ {sign}{delta}). "
+            f"To match the expected total with current Happy and Neutral, set Sad to {needed_sad:,} (computed as Expected − Happy − Neutral)."
+        )
+
+
+    # Read current weights from session (inputs rendered at bottom)
+    w_happy = float(st.session_state.get("csat_w_happy", 0.0))
+    w_neutral = float(st.session_state.get("csat_w_neutral", 15.0))
+    w_sad = float(st.session_state.get("csat_w_sad", 25.0))
+
+    # CES and costs for the sample set (use the actual entered total)
+    total_responses = int(actual_total)
+    ces = None
+    if total_responses > 0:
+        ces = (happy_cnt - sad_cnt) / float(total_responses)
+
+    total_cost = (happy_cnt * w_happy) + (neutral_cnt * w_neutral) + (sad_cnt * w_sad)
+    avg_cost_per_response = (total_cost / total_responses) if total_responses > 0 else None
+
+    # Annualized estimate
+    annual_csat_cost = (avg_cost_per_response or 0.0) * responses_per_year
+
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.metric("Customer Effort Score (CES)", value=(f"{ces:.2f}" if ces is not None else "n/a"))
+    with m2:
+        st.metric("Avg cost/response (USD)", value=(f"${avg_cost_per_response:,.2f}" if avg_cost_per_response is not None else "n/a"))
+    with m3:
+        st.metric("Expected responses/year", value=f"{responses_per_year:,.0f}")
+    with m4:
+        st.metric("Annual CSAT cost (USD)", value=f"${annual_csat_cost:,.0f}")
+
+    # CES tip
+    st.caption("Tip: CES (faces) = (Happy − Sad) ÷ Total responses. Range −1 to +1. Higher is better; 0 is balanced.")
+
+    # Weights UI at bottom with guidance
+    utils.thick_hr(color="grey", thickness=5)
+    st.markdown("**Cost weights (USD per response)**")
+    st.caption("Weights represent the dollar cost per response for each CES category. 'Happy' (easy) should typically be $0.")
+    st.markdown(
+        """
+        **How to use the weights**
+        - Multiply the number of responses for each category by its weight. For example:  
+          Total Cost = (Happy Count × 0) + (Neutral Count × 15) + (Sad Count × 25)
+        - Then divide by the total number of responses to get the average cost per visit.
+
+        To weight Sad, Neutral, and Happy responses in your cost model, assign each response a cost multiplier based on its impact on resources, support effort, and user experience. The weights should reflect how much extra work or cost is associated with each level of effort.
+
+        **How to assign weights (example ranges)**
+        - Happy (Easy): minimal extra cost. Assign a low or zero weight (e.g., $0–$5 per response).
+        - Neutral (Medium): some extra work or minor delays. Assign a moderate weight (e.g., $10–$15 per response).
+        - Sad (Hard): high friction, high user frustration, more tickets, escalations, wasted time. Assign a higher weight (e.g., $20–$30 per response).
+
+        **Choosing the right weights**
+        - Base your weights on actual support costs, time spent, and business impact.
+        - Adjust if your data shows Neutral responses cause more (or less) cost than Sad responses.
+        - The goal is to reflect real resource usage, not just sentiment. This helps quantify the true cost of customer effort and prioritize improvements where they save the most money.
+        """
+    )
+    cw1, cw2, cw3 = st.columns(3)
+    with cw1:
+        new_w_happy = st.number_input("Happy weight (cost/response $)", min_value=0.0, value=w_happy, step=1.0, key="_csat_w_happy")
+    with cw2:
+        new_w_neutral = st.number_input("Neutral weight (cost/response $)", min_value=0.0, value=w_neutral, step=1.0, key="_csat_w_neutral")
+    with cw3:
+        new_w_sad = st.number_input("Sad weight (cost/response $)", min_value=0.0, value=w_sad, step=1.0, key="_csat_w_sad")
+
+    st.session_state["csat_w_happy"] = float(new_w_happy)
+    st.session_state["csat_w_neutral"] = float(new_w_neutral)
+    st.session_state["csat_w_sad"] = float(new_w_sad)
 
 
 # ---------- Streamlit app ----------
@@ -1273,6 +1629,7 @@ def main():
                     "Represents churn risk, service credits, extra support load."
                 ),
             )
+            _debts.caption("Need help estimating CSAT? Use the 'CSAT Debt Calculator' tab above to model CES and annual CSAT cost, then enter values here.")
 
             csat_debt_annual_after = 0.0
             csat_debt_remediation_one_time = 0.0
