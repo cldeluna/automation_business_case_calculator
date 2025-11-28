@@ -434,7 +434,7 @@ def build_markdown_report(
     try:
         dep_lines = ["## Dependencies & External Interfaces"]
         has_any = False
-        for d in (dependencies or []):
+        for d in dependencies or []:
             name = (d or {}).get("name")
             details = ((d or {}).get("details") or "").strip()
             if name:
@@ -668,7 +668,9 @@ def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
 
 def csat_debt_calculator():
     st.subheader("CSAT Debt Calculator")
-    st.caption("Use this calculator to estimate CSAT-related costs and inform the 'Debts & Risk (Optional)' CSAT inputs in the main calculator sidebar.")
+    st.caption(
+        "Use this calculator to estimate CSAT-related costs and inform the 'Debts & Risk (Optional)' CSAT inputs in the main calculator sidebar."
+    )
 
     # Top layout: Methodology (left) and image (right)
     lcol, rcol = st.columns([3, 2])
@@ -689,8 +691,12 @@ def csat_debt_calculator():
         )
     with rcol:
         try:
-            st.info("We categorize Customer Effort Score into Happy (Easy), Neutral (Medium), and Sad (Hard) for simplicity.")
-            st.image("images/shutterstock_1639203016-noborder.png", use_container_width=True)
+            st.info(
+                "We categorize Customer Effort Score into Happy (Easy), Neutral (Medium), and Sad (Hard) for simplicity."
+            )
+            st.image(
+                "images/shutterstock_1639203016-noborder.png", use_container_width=True
+            )
         except Exception:
             pass
 
@@ -698,18 +704,30 @@ def csat_debt_calculator():
     loaded = st.session_state.get("loaded_scenario", {}) or {}
     default_year = loaded.get("tasks_per_year") if isinstance(loaded, dict) else None
     default_cpm_from_scenario = (float(default_year) / 12.0) if default_year else None
-    default_cpm = st.session_state.get("csat_changes_per_month", default_cpm_from_scenario or 10.0)
-    default_hr = st.session_state.get("csat_hourly_rate", loaded.get("hourly_rate", 75.0))
+    default_cpm = st.session_state.get(
+        "csat_changes_per_month", default_cpm_from_scenario or 10.0
+    )
+    default_hr = st.session_state.get(
+        "csat_hourly_rate", loaded.get("hourly_rate", 75.0)
+    )
     default_rpc = st.session_state.get("csat_responses_per_change", 1.0)
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         csat_changes_per_month = st.number_input(
-            "Changes per month (changes/month, default from main)", min_value=0.0, value=float(default_cpm), step=1.0, key="_csat_cpm_input"
+            "Changes per month (changes/month, default from main)",
+            min_value=0.0,
+            value=float(default_cpm),
+            step=1.0,
+            key="_csat_cpm_input",
         )
     with c2:
         csat_hourly_rate = st.number_input(
-            "Engineer fully-loaded cost (USD/hour)", min_value=0.0, value=float(default_hr), step=1.0, key="_csat_hr_input"
+            "Engineer fully-loaded cost (USD/hour)",
+            min_value=0.0,
+            value=float(default_hr),
+            step=1.0,
+            key="_csat_hr_input",
         )
     with c3:
         csat_responses_per_change = st.number_input(
@@ -782,7 +800,9 @@ def csat_debt_calculator():
         # Persist so downstream UI uses the computed value
         st.session_state["csat_expected_total"] = expected_total
     else:
-        manual_default = int(st.session_state.get("csat_expected_total", computed_expected_total))
+        manual_default = int(
+            st.session_state.get("csat_expected_total", computed_expected_total)
+        )
         expected_total = st.number_input(
             "Total expected responses (per year)",
             min_value=0,
@@ -806,10 +826,15 @@ def csat_debt_calculator():
         st.warning(
             f"Manual total expected ≠ computed. Manual: {expected_total:,} • Computed: {computed_expected_total:,} (Δ {sign}{diff})."
         )
-        if st.button("Set expected to computed", help="Replace manual total with the computed value above"):
+        if st.button(
+            "Set expected to computed",
+            help="Replace manual total with the computed value above",
+        ):
             st.session_state["csat_expected_total"] = int(computed_expected_total)
 
-    st.markdown(f"**Customer Effort Score Responses** (Total expected: {expected_total:,} responses/year)")
+    st.markdown(
+        f"**Customer Effort Score Responses** (Total expected: {expected_total:,} responses/year)"
+    )
 
     # Qualitative sentiment assumption (place BEFORE inputs so it can set defaults)
     sentiment_options = [
@@ -817,6 +842,7 @@ def csat_debt_calculator():
         "Customers as happy as necessary",
         "Customers mostly unhappy",
     ]
+
     # Callback to apply distribution on radio change
     def _csat_apply_dist_on_change():
         # Always auto-apply unless manual override is enabled
@@ -829,7 +855,7 @@ def csat_debt_calculator():
         if sentiment == "Customers mostly happy":
             p_h, p_n, p_s = 0.60, 0.30, 0.10
         elif sentiment == "Customers as happy as necessary":
-            p_h, p_n, p_s = 1/3, 1/3, 1/3
+            p_h, p_n, p_s = 1 / 3, 1 / 3, 1 / 3
         else:
             p_h, p_n, p_s = 0.10, 0.30, 0.60
         new_h = int(round(expected * p_h))
@@ -847,11 +873,17 @@ def csat_debt_calculator():
         st.session_state["_csat_neutral"] = new_n
         st.session_state["_csat_sad"] = new_s
 
-    default_sentiment = st.session_state.get("csat_customer_sentiment", sentiment_options[0])
+    default_sentiment = st.session_state.get(
+        "csat_customer_sentiment", sentiment_options[0]
+    )
     csat_customer_sentiment = st.radio(
         "Customer sentiment assumption",
         options=sentiment_options,
-        index=sentiment_options.index(default_sentiment) if default_sentiment in sentiment_options else 0,
+        index=(
+            sentiment_options.index(default_sentiment)
+            if default_sentiment in sentiment_options
+            else 0
+        ),
         horizontal=True,
         help=(
             "Select a preset distribution for Happy/Neutral/Sad.\n"
@@ -871,12 +903,19 @@ def csat_debt_calculator():
     curr_h = int(st.session_state.get("csat_happy_cnt", 50))
     curr_n = int(st.session_state.get("csat_neutral_cnt", 30))
     curr_s = int(st.session_state.get("csat_sad_cnt", 20))
-    if auto_apply and not st.session_state.get("csat_manual_override", False) and (curr_h + curr_n + curr_s) != expected_total:
-        sentiment = st.session_state.get("_csat_customer_sentiment_radio") or csat_customer_sentiment
+    if (
+        auto_apply
+        and not st.session_state.get("csat_manual_override", False)
+        and (curr_h + curr_n + curr_s) != expected_total
+    ):
+        sentiment = (
+            st.session_state.get("_csat_customer_sentiment_radio")
+            or csat_customer_sentiment
+        )
         if sentiment == "Customers mostly happy":
             p_h, p_n, p_s = 0.60, 0.30, 0.10
         elif sentiment == "Customers as happy as necessary":
-            p_h, p_n, p_s = 1/3, 1/3, 1/3
+            p_h, p_n, p_s = 1 / 3, 1 / 3, 1 / 3
         else:
             p_h, p_n, p_s = 0.10, 0.30, 0.60
         new_h = int(round(expected_total * p_h))
@@ -890,14 +929,19 @@ def csat_debt_calculator():
         st.session_state["csat_sad_cnt"] = new_s
 
     # Seed defaults for persistent counts if not set yet (initial distribution)
-    if ("csat_happy_cnt" not in st.session_state
+    if (
+        "csat_happy_cnt" not in st.session_state
         or "csat_neutral_cnt" not in st.session_state
-        or "csat_sad_cnt" not in st.session_state):
-        sentiment = st.session_state.get("_csat_customer_sentiment_radio") or csat_customer_sentiment
+        or "csat_sad_cnt" not in st.session_state
+    ):
+        sentiment = (
+            st.session_state.get("_csat_customer_sentiment_radio")
+            or csat_customer_sentiment
+        )
         if sentiment == "Customers mostly happy":
             p_h, p_n, p_s = 0.60, 0.30, 0.10
         elif sentiment == "Customers as happy as necessary":
-            p_h, p_n, p_s = 1/3, 1/3, 1/3
+            p_h, p_n, p_s = 1 / 3, 1 / 3, 1 / 3
         else:
             p_h, p_n, p_s = 0.10, 0.30, 0.60
         new_h = int(round(expected_total * p_h))
@@ -958,7 +1002,6 @@ def csat_debt_calculator():
             f"To match the expected total with current Happy and Neutral, set Sad to {needed_sad:,} (computed as Expected − Happy − Neutral)."
         )
 
-
     # Read current weights from session (inputs rendered at bottom)
     w_happy = float(st.session_state.get("csat_w_happy", 0.0))
     w_neutral = float(st.session_state.get("csat_w_neutral", 15.0))
@@ -971,28 +1014,44 @@ def csat_debt_calculator():
         ces = (happy_cnt - sad_cnt) / float(total_responses)
 
     total_cost = (happy_cnt * w_happy) + (neutral_cnt * w_neutral) + (sad_cnt * w_sad)
-    avg_cost_per_response = (total_cost / total_responses) if total_responses > 0 else None
+    avg_cost_per_response = (
+        (total_cost / total_responses) if total_responses > 0 else None
+    )
 
     # Annualized estimate
     annual_csat_cost = (avg_cost_per_response or 0.0) * responses_per_year
 
     m1, m2, m3, m4 = st.columns(4)
     with m1:
-        st.metric("Customer Effort Score (CES)", value=(f"{ces:.2f}" if ces is not None else "n/a"))
+        st.metric(
+            "Customer Effort Score (CES)",
+            value=(f"{ces:.2f}" if ces is not None else "n/a"),
+        )
     with m2:
-        st.metric("Avg cost/response (USD)", value=(f"${avg_cost_per_response:,.2f}" if avg_cost_per_response is not None else "n/a"))
+        st.metric(
+            "Avg cost/response (USD)",
+            value=(
+                f"${avg_cost_per_response:,.2f}"
+                if avg_cost_per_response is not None
+                else "n/a"
+            ),
+        )
     with m3:
         st.metric("Expected responses/year", value=f"{responses_per_year:,.0f}")
     with m4:
         st.metric("Annual CSAT cost (USD)", value=f"${annual_csat_cost:,.0f}")
 
     # CES tip
-    st.caption("Tip: CES (faces) = (Happy − Sad) ÷ Total responses. Range −1 to +1. Higher is better; 0 is balanced.")
+    st.caption(
+        "Tip: CES (faces) = (Happy − Sad) ÷ Total responses. Range −1 to +1. Higher is better; 0 is balanced."
+    )
 
     # Weights UI at bottom with guidance
     utils.thick_hr(color="grey", thickness=5)
     st.markdown("**Cost weights (USD per response)**")
-    st.caption("Weights represent the dollar cost per response for each CES category. 'Happy' (easy) should typically be $0.")
+    st.caption(
+        "Weights represent the dollar cost per response for each CES category. 'Happy' (easy) should typically be $0."
+    )
     st.markdown(
         """
         **How to use the weights**
@@ -1015,11 +1074,29 @@ def csat_debt_calculator():
     )
     cw1, cw2, cw3 = st.columns(3)
     with cw1:
-        new_w_happy = st.number_input("Happy weight (cost/response $)", min_value=0.0, value=w_happy, step=1.0, key="_csat_w_happy")
+        new_w_happy = st.number_input(
+            "Happy weight (cost/response $)",
+            min_value=0.0,
+            value=w_happy,
+            step=1.0,
+            key="_csat_w_happy",
+        )
     with cw2:
-        new_w_neutral = st.number_input("Neutral weight (cost/response $)", min_value=0.0, value=w_neutral, step=1.0, key="_csat_w_neutral")
+        new_w_neutral = st.number_input(
+            "Neutral weight (cost/response $)",
+            min_value=0.0,
+            value=w_neutral,
+            step=1.0,
+            key="_csat_w_neutral",
+        )
     with cw3:
-        new_w_sad = st.number_input("Sad weight (cost/response $)", min_value=0.0, value=w_sad, step=1.0, key="_csat_w_sad")
+        new_w_sad = st.number_input(
+            "Sad weight (cost/response $)",
+            min_value=0.0,
+            value=w_sad,
+            step=1.0,
+            key="_csat_w_sad",
+        )
 
     st.session_state["csat_w_happy"] = float(new_w_happy)
     st.session_state["csat_w_neutral"] = float(new_w_neutral)
@@ -1060,7 +1137,9 @@ def main():
         "Automation Business Case content appears below. Use the Calculator tab for quick arithmetic calculations."
     )
     # --- Tabs ---
-    tab_bc, tab_calc, tab_csat = st.tabs(["Business Case", "Calculator", "CSAT Debt Calculator"])
+    tab_bc, tab_calc, tab_csat = st.tabs(
+        ["Business Case", "Calculator", "CSAT Debt Calculator"]
+    )
     with tab_bc:
 
         # ---- Scenario loader (optional) ----
@@ -1629,7 +1708,9 @@ def main():
                     "Represents churn risk, service credits, extra support load."
                 ),
             )
-            _debts.caption("Need help estimating CSAT? Use the 'CSAT Debt Calculator' tab above to model CES and annual CSAT cost, then enter values here.")
+            _debts.caption(
+                "Need help estimating CSAT? Use the 'CSAT Debt Calculator' tab above to model CES and annual CSAT cost, then enter values here."
+            )
 
             csat_debt_annual_after = 0.0
             csat_debt_remediation_one_time = 0.0
@@ -1933,9 +2014,13 @@ def main():
             utils.thick_hr(color="green", thickness=5)
 
             # Dependencies & External Interfaces (placed above Intangible / Soft Benefits)
-            _deps_bottom = st.expander("Dependencies & External Interfaces", expanded=False)
+            _deps_bottom = st.expander(
+                "Dependencies & External Interfaces", expanded=False
+            )
             with _deps_bottom:
-                st.caption("Select the external systems this automation will interact with and add details where applicable.")
+                st.caption(
+                    "Select the external systems this automation will interact with and add details where applicable."
+                )
                 deps_selected = []
                 for d in dep_defs:
                     checked = st.checkbox(
@@ -1955,7 +2040,9 @@ def main():
                             key=f"dep_{d['key']}_details",
                         )
                     if checked:
-                        deps_selected.append({"name": d["label"], "details": detail_text.strip()})
+                        deps_selected.append(
+                            {"name": d["label"], "details": detail_text.strip()}
+                        )
 
             # Hold for later use in summary/report/JSON
             dependencies_selected = deps_selected
@@ -2752,9 +2839,13 @@ def main():
                 # Reflect development team selection in the summary when building
                 dev_notes = []
                 if st.session_state.get("build_dev_by_networking_staff"):
-                    dev_notes.append("Development performed by networking staff (ensure opportunity cost and training captured).")
+                    dev_notes.append(
+                        "Development performed by networking staff (ensure opportunity cost and training captured)."
+                    )
                 if st.session_state.get("build_dev_by_software_devs"):
-                    dev_notes.append("Development performed by software developers (likely reduced networking staff training/opportunity costs; networking guides).")
+                    dev_notes.append(
+                        "Development performed by software developers (likely reduced networking staff training/opportunity costs; networking guides)."
+                    )
                 for n in dev_notes:
                     st.text(f"- {n}")
 
@@ -2900,8 +2991,12 @@ def main():
                     "minutes_saved_per_change": minutes_saved_per_change,
                     "acquisition_strategy": acquisition_strategy,
                     # Acquisition details (Build-specific developer selection flags)
-                    "build_dev_by_networking_staff": bool(st.session_state.get("build_dev_by_networking_staff", False)),
-                    "build_dev_by_software_devs": bool(st.session_state.get("build_dev_by_software_devs", False)),
+                    "build_dev_by_networking_staff": bool(
+                        st.session_state.get("build_dev_by_networking_staff", False)
+                    ),
+                    "build_dev_by_software_devs": bool(
+                        st.session_state.get("build_dev_by_software_devs", False)
+                    ),
                     # Dependencies & External Interfaces (checked only)
                     "dependencies": dependencies_selected,
                     "cost_breakdown": cost_breakdown,
@@ -3023,7 +3118,9 @@ def main():
 
     with tab_calc:
         st.subheader("Simple Calculator")
-        st.caption("Quick four-function calculator. External calculators often block embedding; use the link below if you prefer.")
+        st.caption(
+            "Quick four-function calculator. External calculators often block embedding; use the link below if you prefer."
+        )
 
         col_a, col_op, col_b = st.columns([3, 2, 3])
         with col_a:
@@ -3050,7 +3147,9 @@ def main():
             st.info(f"{a} {op} {b} = {res}")
 
         st.caption("Need a full scientific calculator?")
-        st.markdown("[Open Calculator in new tab](https://www.calculator.net/math-calculator.html)")
+        st.markdown(
+            "[Open Calculator in new tab](https://www.calculator.net/math-calculator.html)"
+        )
 
     with tab_csat:
         csat_debt_calculator()
