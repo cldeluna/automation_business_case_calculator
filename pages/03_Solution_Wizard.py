@@ -692,6 +692,118 @@ def main():
         }
         st.session_state["solution_wizard"] = merged_exec
 
+    # Dependencies & External Interfaces (shared across pages)
+    with st.expander("Dependencies & External Interfaces", expanded=False):
+        st.caption(
+            "Select the external systems this automation will interact with and add details where applicable."
+        )
+
+        # Initialize or reuse shared dependency definitions
+        if "dep_defs" not in st.session_state:
+            st.session_state["dep_defs"] = [
+                {
+                    "key": "network_infra",
+                    "label": "Network Infrastructure",
+                    "default": True,
+                    "details": False,
+                    "help": "The automation will act on some or all of the organization's network infrastructure (switches, appliances, routers, etc.).",
+                },
+                {
+                    "key": "network_controllers",
+                    "label": "Network Controllers",
+                    "default": False,
+                    "details": True,
+                    "help": "Controller platforms that abstract device APIs (e.g., Cisco APIC/ND). Provide which controller(s) and scope.",
+                },
+                {
+                    "key": "revision_control",
+                    "label": "Revision Control system",
+                    "default": True,
+                    "details": True,
+                    "help": "System for versioning configuration/templates and code (e.g., GitHub, GitLab, Bitbucket).",
+                    "default_detail": "GitHub",
+                },
+                {
+                    "key": "itsm",
+                    "label": "ITSM/Change Management System",
+                    "default": False,
+                    "details": True,
+                    "help": "Ticketing/approval workflow (e.g., ServiceNow, Jira Service Management). Include integration points.",
+                },
+                {
+                    "key": "authn",
+                    "label": "Authentication System",
+                    "default": False,
+                    "details": True,
+                    "help": "Identity/RBAC, secrets, SSO (e.g., Okta, Azure AD, LDAP, Vault). Specify how access is controlled.",
+                },
+                {
+                    "key": "ipams",
+                    "label": "IPAMS Systems",
+                    "default": False,
+                    "details": True,
+                    "help": "IP address management and DNS (e.g., Infoblox, BlueCat). Describe lookups/updates involved.",
+                },
+                {
+                    "key": "inventory",
+                    "label": "Inventory Systems",
+                    "default": False,
+                    "details": True,
+                    "help": "Source of truth/CMDB/inventory (e.g., NetBox, InfraHub, ServiceNow CMDB). What data do you read/write?",
+                },
+                {
+                    "key": "design_intent",
+                    "label": "Design Data/Intent Systems",
+                    "default": False,
+                    "details": True,
+                    "help": "Systems holding golden intent or design models (InfraHub, Custom DB).",
+                },
+                {
+                    "key": "observability",
+                    "label": "Observability System",
+                    "default": False,
+                    "details": True,
+                    "help": "Telemetry/monitoring/logs/traces (e.g., SuzieQ, Prometheus).",
+                },
+                {
+                    "key": "vendor_mgmt",
+                    "label": "Vendor Tool/Management System",
+                    "default": False,
+                    "details": True,
+                    "help": "(e.g., Cisco DNAC, Wireless Controllers, Miraki, Arista CVP, Aruba Central, Juniper Apstra).",
+                },
+            ]
+        dep_defs = st.session_state["dep_defs"]
+
+        deps_selected = []
+        for d in dep_defs:
+            checked = st.checkbox(
+                d["label"],
+                key=f"dep_{d['key']}",
+                value=bool(st.session_state.get(f"dep_{d['key']}", d.get("default", False))),
+                help=d.get("help"),
+            )
+            detail_text = ""
+            if checked and d.get("details"):
+                default_detail = d.get("default_detail", "")
+                if d["key"] == "revision_control":
+                    default_detail = "GitHub"
+                detail_text = st.text_input(
+                    f"Details for {d['label']}",
+                    value=str(st.session_state.get(f"dep_{d['key']}_details", default_detail)),
+                    key=f"dep_{d['key']}_details",
+                )
+            if checked:
+                deps_selected.append({"name": d["label"], "details": (detail_text or "").strip()})
+
+        # Persist into wizard payload
+        existing = st.session_state.get("solution_wizard", {})
+        merged_deps = {
+            **existing,
+            "dependencies": deps_selected,
+        }
+        st.session_state["solution_wizard"] = merged_deps
+
     # Live narrative preview
     utils.thick_hr(color="grey", thickness=5)
     st.subheader("Solution Highlights")
@@ -795,6 +907,23 @@ def main():
             any_content = True
             st.markdown("**Collector**")
             st.markdown("\n".join(sec_lines))
+
+    # Dependencies block in highlights
+    deps = payload.get("dependencies", [])
+    if deps:
+        dep_lines = []
+        for d in deps:
+            name = (d or {}).get("name")
+            details = (d or {}).get("details")
+            if name:
+                if details:
+                    dep_lines.append(_md_line(f"{name}: {details}"))
+                else:
+                    dep_lines.append(_md_line(f"{name}"))
+        if dep_lines:
+            any_content = True
+            st.markdown("**Dependencies & External Interfaces**")
+            st.markdown("\n".join(dep_lines))
 
     if not any_content:
         st.info("Work through the Automation Framework functions/layers to see highlights here.")
