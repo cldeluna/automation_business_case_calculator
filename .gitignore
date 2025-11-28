@@ -12,3 +12,6 @@ wheels/
 
 # Archives
 xArchive
+
+# Images
+*.eps
