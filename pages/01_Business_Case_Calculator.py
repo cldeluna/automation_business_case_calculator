@@ -861,11 +861,11 @@ def main():
             with _acq:
                 st.subheader("Acquisition Strategy")
                 st.caption("All amounts below are COSTS (expenses), in USD.")
-                _default_acq = sv("acquisition_strategy", "Build in-house")
+                _default_acq = sv("acquisition_strategy", "Build")
                 _default_index = 0 if str(_default_acq).lower().startswith("buy") else 1
                 acquisition_strategy = st.radio(
                     "Will you buy a tool or build in-house?",
-                    options=["Buy tool(s)", "Build in-house"],
+                    options=["Buy", "Build"],
                     index=_default_index,
                     help=(
                         "Buy: pay vendor license(s) and integrate.\n"
@@ -876,7 +876,7 @@ def main():
             # Prepare cost breakdown container to append additional items later
             cost_breakdown: List[Dict[str, Any]] = []
 
-            if acquisition_strategy == "Buy tool(s)":
+            if acquisition_strategy == "Buy":
                 with _acq:
                     st.caption(
                         "Specify one-time and ongoing costs for buying a tool or tools."
@@ -959,6 +959,25 @@ def main():
                 with _acq:
                     st.caption(
                         "Specify one-time and ongoing costs for building in-house."
+                    )
+                    st.checkbox(
+                        "Software Development by Networking Staff",
+                        key="build_dev_by_networking_staff",
+                        value=bool(sv("build_dev_by_networking_staff", False)),
+                        help=(
+                            "Software development for this automation project will be done by the networking staff. "
+                            "Make sure to capture the staff opportunity costs and any staff training required for this scenario"
+                        ),
+                    )
+                    st.checkbox(
+                        "Software Development by Software Developer(s)",
+                        key="build_dev_by_software_devs",
+                        value=bool(sv("build_dev_by_software_devs", False)),
+                        help=(
+                            "Software development will be done by software developers so network team training costs may be reduced "
+                            "and training may only be training users for the new capability.  staff opportunity may also be reduced "
+                            "as networking staff may guide but will not be doing the softawre development"
+                        ),
                     )
                     st.markdown("**One-time costs**")
                 with _acq:
@@ -2234,6 +2253,14 @@ def main():
                     f"One-time project ~${project_cost:,.0f}; ongoing ~${annual_run_cost:,.0f}/year (support/maintenance). "
                     "Consequences: greater control and fit, skill growth, longer time-to-value, internal opportunity cost."
                 )
+                # Reflect development team selection in the summary when building
+                dev_notes = []
+                if st.session_state.get("build_dev_by_networking_staff"):
+                    dev_notes.append("Development performed by networking staff (ensure opportunity cost and training captured).")
+                if st.session_state.get("build_dev_by_software_devs"):
+                    dev_notes.append("Development performed by software developers (likely reduced networking staff training/opportunity costs; networking guides).")
+                for n in dev_notes:
+                    st.text(f"- {n}")
 
             st.markdown("**Benefits** –")
             st.text(
@@ -2367,6 +2394,9 @@ def main():
                     "auto_total_minutes": auto_total_minutes,
                     "minutes_saved_per_change": minutes_saved_per_change,
                     "acquisition_strategy": acquisition_strategy,
+                    # Acquisition details (Build-specific developer selection flags)
+                    "build_dev_by_networking_staff": bool(st.session_state.get("build_dev_by_networking_staff", False)),
+                    "build_dev_by_software_devs": bool(st.session_state.get("build_dev_by_software_devs", False)),
                     "cost_breakdown": cost_breakdown,
                     # Intangible / Soft Benefits selections
                     "soft_benefits": soft_benefits_selected,
