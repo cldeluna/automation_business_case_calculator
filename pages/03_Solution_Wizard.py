@@ -780,7 +780,9 @@ def main():
             checked = st.checkbox(
                 d["label"],
                 key=f"dep_{d['key']}",
-                value=bool(st.session_state.get(f"dep_{d['key']}", d.get("default", False))),
+                value=bool(
+                    st.session_state.get(f"dep_{d['key']}", d.get("default", False))
+                ),
                 help=d.get("help"),
             )
             detail_text = ""
@@ -790,11 +792,15 @@ def main():
                     default_detail = "GitHub"
                 detail_text = st.text_input(
                     f"Details for {d['label']}",
-                    value=str(st.session_state.get(f"dep_{d['key']}_details", default_detail)),
+                    value=str(
+                        st.session_state.get(f"dep_{d['key']}_details", default_detail)
+                    ),
                     key=f"dep_{d['key']}_details",
                 )
             if checked:
-                deps_selected.append({"name": d["label"], "details": (detail_text or "").strip()})
+                deps_selected.append(
+                    {"name": d["label"], "details": (detail_text or "").strip()}
+                )
 
         # Persist into wizard payload
         existing = st.session_state.get("solution_wizard", {})
@@ -899,7 +905,9 @@ def main():
             sec_lines.append(_md_line(collector.get("auth")))
         if collector.get("handling") and _is_meaningful(collector.get("handling")):
             sec_lines.append(_md_line(collector.get("handling")))
-        if collector.get("normalization") and _is_meaningful(collector.get("normalization")):
+        if collector.get("normalization") and _is_meaningful(
+            collector.get("normalization")
+        ):
             sec_lines.append(_md_line(collector.get("normalization")))
         if collector.get("scale") and _is_meaningful(collector.get("scale")):
             sec_lines.append(_md_line(collector.get("scale")))
@@ -926,7 +934,9 @@ def main():
             st.markdown("\n".join(dep_lines))
 
     if not any_content:
-        st.info("Work through the Automation Framework functions/layers to see highlights here.")
+        st.info(
+            "Work through the Automation Framework functions/layers to see highlights here."
+        )
 
     # Final download (all blocks) — only when there is meaningful content
     if any_content:
