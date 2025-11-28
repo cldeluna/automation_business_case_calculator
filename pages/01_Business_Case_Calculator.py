@@ -1268,6 +1268,18 @@ def csat_debt_calculator():
         )
 
 
+def tech_debt_calculator():
+    """
+    Technical Debt Calculator UI and logic.
+
+    """
+    st.subheader("Technical Debt Calculator")
+    st.caption(
+        "Use this calculator to estimate Techncial Cost related costs and inform the 'Debts & Risk (Optional)' inputs in the main calculator sidebar."
+    )
+    st.info("Future Capabiity")
+
+
 # ---------- Streamlit app ----------
 
 
@@ -1302,8 +1314,13 @@ def main():
         "Automation Business Case content appears below. Use the Calculator tab for quick arithmetic calculations."
     )
     # --- Tabs ---
-    tab_bc, tab_calc, tab_csat = st.tabs(
-        ["Business Case", "Calculator", "CSAT Debt Calculator"]
+    tab_bc, tab_calc, tab_csat, tab_techdebt = st.tabs(
+        [
+            "Business Case",
+            "Calculator",
+            "CSAT Debt Calculator",
+            "Techical Debt Calculator",
+        ]
     )
     with tab_bc:
 
@@ -1858,7 +1875,11 @@ def main():
                         "Non-automated portion applied to Technical debt (%)",
                         min_value=0.0,
                         max_value=100.0,
-                        value=float(st.session_state.get("debts_non_auto_pct_tech", default_non_auto)),
+                        value=float(
+                            st.session_state.get(
+                                "debts_non_auto_pct_tech", default_non_auto
+                            )
+                        ),
                         step=5.0,
                         help=(
                             "By default this mirrors the scope's non-automated portion (100 − automation%). "
@@ -1866,7 +1887,9 @@ def main():
                         ),
                         key="_debts_non_auto_pct_tech_input",
                     )
-                    st.session_state["debts_non_auto_pct_tech"] = float(debts_non_auto_pct_tech)
+                    st.session_state["debts_non_auto_pct_tech"] = float(
+                        debts_non_auto_pct_tech
+                    )
 
                     # Technical debt inputs and calculations
                     base_tech_debt_annual = _debts.number_input(
@@ -1875,7 +1898,15 @@ def main():
                         value=float(sv("tech_debt_base_annual", 20000.0)),
                         step=1000.0,
                     )
-                    impact_pct = float(st.session_state.get("debts_non_auto_pct_tech", max(0.0, 100.0 - automation_coverage_pct))) / 100.0
+                    impact_pct = (
+                        float(
+                            st.session_state.get(
+                                "debts_non_auto_pct_tech",
+                                max(0.0, 100.0 - automation_coverage_pct),
+                            )
+                        )
+                        / 100.0
+                    )
                     tech_debt_base_annual = float(base_tech_debt_annual)
                     tech_debt_impact_pct = impact_pct
                     tech_debt_annual = base_tech_debt_annual * impact_pct
@@ -1939,7 +1970,9 @@ def main():
                         "Need help estimating CSAT? Use the 'CSAT Debt Calculator' tab above to model CES and annual CSAT cost, then enter values here."
                     )
                     try:
-                        st.caption("Tip: Click the 'CSAT Debt Calculator' tab at the top of this page.")
+                        st.caption(
+                            "Tip: Click the 'CSAT Debt Calculator' tab at the top of this page."
+                        )
                         st.page_link(
                             "pages/01_Business_Case_Calculator.py",
                             label="Open Business Case page (then select the 'CSAT Debt Calculator' tab)",
@@ -1951,7 +1984,11 @@ def main():
                         "Non-automated portion applied to CSAT debt (%)",
                         min_value=0.0,
                         max_value=100.0,
-                        value=float(st.session_state.get("debts_non_auto_pct_csat", default_non_auto)),
+                        value=float(
+                            st.session_state.get(
+                                "debts_non_auto_pct_csat", default_non_auto
+                            )
+                        ),
                         step=5.0,
                         help=(
                             "By default this mirrors the scope's non-automated portion (100 − automation%). "
@@ -1959,7 +1996,9 @@ def main():
                         ),
                         key="_debts_non_auto_pct_csat_input",
                     )
-                    st.session_state["debts_non_auto_pct_csat"] = float(debts_non_auto_pct_csat)
+                    st.session_state["debts_non_auto_pct_csat"] = float(
+                        debts_non_auto_pct_csat
+                    )
 
                     # CSAT debt inputs and calculations
                     base_csat_debt_annual = _debts.number_input(
@@ -1972,7 +2011,15 @@ def main():
                             "Model impact is scaled by the selected non‑automated portion above."
                         ),
                     )
-                    impact_pct = float(st.session_state.get("debts_non_auto_pct_csat", max(0.0, 100.0 - automation_coverage_pct))) / 100.0
+                    impact_pct = (
+                        float(
+                            st.session_state.get(
+                                "debts_non_auto_pct_csat",
+                                max(0.0, 100.0 - automation_coverage_pct),
+                            )
+                        )
+                        / 100.0
+                    )
                     csat_debt_base_annual = float(base_csat_debt_annual)
                     csat_debt_impact_pct = impact_pct
                     csat_debt_annual = base_csat_debt_annual * impact_pct
@@ -2012,7 +2059,9 @@ def main():
                         )
                         csat_debt_residual_pct = csat_residual_pct
 
-                    csat_debt_annual_after = csat_debt_annual * (csat_residual_pct / 100.0)
+                    csat_debt_annual_after = csat_debt_annual * (
+                        csat_residual_pct / 100.0
+                    )
                     if include_csat_remediation:
                         _debts.info(
                             f"CSAT debt after remediation (annual): ${csat_debt_annual_after:,.0f} (residual {csat_residual_pct:.0f}% of pre‑remediation)"
@@ -2032,8 +2081,6 @@ def main():
                                 "amount": csat_debt_remediation_one_time,
                             }
                         )
-
-
 
             # Summary of costs at bottom of section (vertical for readability)
             utils.thick_hr(color="red", thickness=5)
@@ -3411,6 +3458,9 @@ def main():
 
     with tab_csat:
         csat_debt_calculator()
+
+    with tab_techdebt:
+        tech_debt_calculator()
 
 
 # Standard call to the main() function.
