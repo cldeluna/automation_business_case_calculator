@@ -667,9 +667,9 @@ def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
 
 
 def csat_debt_calculator():
-    st.subheader("CSAT Debt Calculator")
+    st.subheader("Customer Satisfaction (CSAT) Debt Calculator")
     st.caption(
-        "Use this calculator to estimate CSAT-related costs and inform the 'Debts & Risk (Optional)' CSAT inputs in the main calculator sidebar."
+        "Use this calculator to estimate Customer Satisfaction related costs and inform the 'Debts & Risk (Optional)' CSAT inputs in the main calculator sidebar."
     )
 
     # Top layout: Methodology (left) and image (right)
@@ -689,6 +689,29 @@ def csat_debt_calculator():
             - Choose weights to reflect real support effort and business impact. Higher weights represent more friction (rework, escalations, delays). Weights can be adjusted below.
             """
         )
+        # Quality of calculations rating
+        quality_options = [
+            "Gold – Data comes from actual ticket volume and customer responses",
+            "Silver – Data comes from some actual data and manipulation/normalization",
+            "Bronze – Complete SWAG based on perception and anecdotes",
+        ]
+        default_quality = st.session_state.get(
+            "csat_quality_rating",
+            "Silver – Data comes from some actual data and manipulation/normalization",
+        )
+        quality_rating = st.radio(
+            "Quality of calculations",
+            options=quality_options,
+            index=(quality_options.index(default_quality)
+                   if default_quality in quality_options else 1),
+            help=(
+                "Select the quality level describing how these calculations were derived. "
+                "Gold = direct measured data. Silver = partial data plus normalization. "
+                "Bronze = rough estimate (SWAG)."
+            ),
+            key="_csat_quality_rating",
+        )
+        st.session_state["csat_quality_rating"] = quality_rating
     with rcol:
         try:
             st.info(
@@ -701,6 +724,7 @@ def csat_debt_calculator():
             pass
 
     # Defaults from main scenario but stored under csat_* keys
+    utils.thick_hr(color="#6785a0", thickness=5)
     loaded = st.session_state.get("loaded_scenario", {}) or {}
     default_year = loaded.get("tasks_per_year") if isinstance(loaded, dict) else None
     default_cpm_from_scenario = (float(default_year) / 12.0) if default_year else None
@@ -1051,7 +1075,7 @@ def csat_debt_calculator():
 
     # Weights UI at bottom with guidance
     utils.thick_hr(color="grey", thickness=5)
-    st.markdown("**Cost weights (USD per response)**")
+    st.subheader("CSAT Weights (Cost per Response)")
     st.caption(
         "Weights represent the dollar cost per response for each CES category. 'Happy' (easy) should typically be $0."
     )
@@ -1075,6 +1099,26 @@ def csat_debt_calculator():
         - The goal is to reflect real resource usage, not just sentiment. This helps quantify the true cost of customer effort and prioritize improvements where they save the most money.
         """
     )
+
+    # Precompute linked weights before inputs render
+    # Prefer current widget values if present (ensures immediate response to minute edits)
+    _pre_min_neutral = int(
+        st.session_state.get("_csat_min_neutral_minutes",
+                              st.session_state.get("csat_min_neutral_minutes", 20))
+    )
+    _pre_min_sad = int(
+        st.session_state.get("_csat_min_sad_minutes",
+                              st.session_state.get("csat_min_sad_minutes", 45))
+    )
+    # Keep persistent minutes in sync for downstream logic
+    st.session_state["csat_min_neutral_minutes"] = _pre_min_neutral
+    st.session_state["csat_min_sad_minutes"] = _pre_min_sad
+    _pre_eng_rate = float(st.session_state.get("csat_hourly_rate", 75.0)) if "csat_hourly_rate" in st.session_state else float(csat_hourly_rate)
+    _pre_cost_neutral = _pre_eng_rate * (_pre_min_neutral / 60.0) if _pre_min_neutral else 0.0
+    _pre_cost_sad = _pre_eng_rate * (_pre_min_sad / 60.0) if _pre_min_sad else 0.0
+    if st.session_state.get("csat_link_weights_to_minutes", True):
+        st.session_state["csat_w_neutral"] = float(_pre_cost_neutral)
+        st.session_state["csat_w_sad"] = float(_pre_cost_sad)
     cw1, cw2, cw3 = st.columns(3)
     with cw1:
         new_w_happy = st.number_input(
@@ -1088,22 +1132,74 @@ def csat_debt_calculator():
         new_w_neutral = st.number_input(
             "Neutral weight (cost/response $)",
             min_value=0.0,
-            value=w_neutral,
             step=1.0,
-            key="_csat_w_neutral",
+            key="csat_w_neutral",
+            disabled=st.session_state.get("csat_link_weights_to_minutes", True),
         )
     with cw3:
         new_w_sad = st.number_input(
             "Sad weight (cost/response $)",
             min_value=0.0,
-            value=w_sad,
             step=1.0,
-            key="_csat_w_sad",
+            key="csat_w_sad",
+            disabled=st.session_state.get("csat_link_weights_to_minutes", True),
         )
 
     st.session_state["csat_w_happy"] = float(new_w_happy)
-    st.session_state["csat_w_neutral"] = float(new_w_neutral)
-    st.session_state["csat_w_sad"] = float(new_w_sad)
+
+    # Separator and minutes-based helper UI at the very bottom
+    utils.thick_hr(color="grey", thickness=5)
+    st.markdown("**Minutes-based weight helper**")
+    st.caption(
+        "Estimate Neutral/Sad cost per response from remediation time and the engineer fully-loaded rate above."
+    )
+
+    min_neutral_default = int(st.session_state.get("csat_min_neutral_minutes", 20))
+    min_sad_default = int(st.session_state.get("csat_min_sad_minutes", 45))
+
+    # Two-column layout: Neutral (left), Sad (right)
+    eng_rate = float(st.session_state.get("csat_hourly_rate", 75.0)) if "csat_hourly_rate" in st.session_state else float(csat_hourly_rate)
+    cL, cR = st.columns(2)
+    with cL:
+        st.markdown("**Neutral**")
+        min_neutral = st.number_input(
+            "Neutral minutes to remediate",
+            min_value=0,
+            value=min_neutral_default,
+            step=5,
+            key="_csat_min_neutral_minutes",
+            help="Typical minutes of engineering effort to remediate a neutral (medium) response",
+        )
+        _frac_neutral = (float(min_neutral) / 60.0) if min_neutral else 0.0
+        _cost_neutral_calc = eng_rate * _frac_neutral
+        st.metric("% of hour", value=f"{(_frac_neutral * 100):.1f}%")
+        st.metric("Calc cost ($)", value=f"${_cost_neutral_calc:,.2f}")
+    with cR:
+        st.markdown("**Sad**")
+        min_sad = st.number_input(
+            "Sad minutes to remediate",
+            min_value=0,
+            value=min_sad_default,
+            step=5,
+            key="_csat_min_sad_minutes",
+            help="Typical minutes of engineering effort to remediate a sad (hard) response",
+        )
+        _frac_sad = (float(min_sad) / 60.0) if min_sad else 0.0
+        _cost_sad_calc = eng_rate * _frac_sad
+        st.metric("% of hour", value=f"{(_frac_sad * 100):.1f}%")
+        st.metric("Calc cost ($)", value=f"${_cost_sad_calc:,.2f}")
+
+    # Persist minutes
+    st.session_state["csat_min_neutral_minutes"] = int(min_neutral)
+    st.session_state["csat_min_sad_minutes"] = int(min_sad)
+
+    # Link behavior toggle (affects next rerun precompute)
+    st.checkbox(
+        "Link weights to minutes and engineer rate",
+        key="csat_link_weights_to_minutes",
+        value=st.session_state.get("csat_link_weights_to_minutes", True),
+        help="When enabled, Neutral and Sad weights are set from minutes × engineer rate and stay in sync.",
+    )
 
 
 # ---------- Streamlit app ----------
