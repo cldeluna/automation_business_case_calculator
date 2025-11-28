@@ -21,6 +21,20 @@ Contact: <claudia@eianow.com> • https://eianow.com
   - Generates a CXO-ready Markdown report and NABCD(E) summary.
   - Download ZIP containing the Markdown report and a timestamped scenario JSON.
 
+- **Solution Wizard (NAF Framework)**
+  - A structured thinking tool aligned to the Network Automation Forum’s Automation Framework.
+  - Helps you articulate what the automation will do, who it serves, and how it will be built/bought and supported.
+  - Optional: you can skip it if you already have solid inputs for the calculator.
+  - Assists in drafting the “Detailed solution description (Markdown supported)” text.
+
+- **CSAT Debt Calculator**
+  - Dedicated tab under the Business Case Calculator.
+  - Model Customer Effort Score (CES) response mix and per‑response costs.
+  - Sentiment distribution with auto‑apply and a manual override mode for counts.
+  - Weights expander with a minutes‑to‑cost helper (linked to engineer hourly rate) for Neutral/Sad.
+  - “Quality of calculations” rating to capture methodology confidence.
+  - Produces an annual CSAT cost that can inform the Debts & Risk CSAT input.
+
 - **Business Case Comparison**
   - Upload two saved scenario JSON files (e.g., Buy vs Build) and compare key outcomes side-by-side.
   - Shows deltas for project cost, run cost, total/net benefits, NPV, IRR, and payback.
@@ -29,9 +43,15 @@ Contact: <claudia@eianow.com> • https://eianow.com
 - 🧮 `Business Case Calculator` (`pages/01_Business_Case_Calculator.py`)
   - Interactive inputs and instant calculations.
   - Report builder and scenario save/load utilities.
+  - Includes a CSAT Debt Calculator tab for modeling CES and CSAT costs.
 
 - 📊 `Business Case Comparison` (`pages/02_Business_Case_Comparison.py`)
   - Side-by-side comparison table built from two uploaded scenario JSON files.
+
+- 🧭 `Solution Wizard` (`pages/03_Solution_Wizard.py`)
+  - Guides you through NAF Framework components (Presentation, Intent, Observability, Orchestration, Collector, Executor).
+  - Optional; use it to validate your plan and generate descriptive narrative.
+  - Source: https://github.com/Network-Automation-Forum/reference/tree/main/docs/Framework
 
 ## Requirements
 - Python 3.11+ (per pyproject)
@@ -235,7 +255,9 @@ Selected items appear in the web output and are included in the Markdown report 
 3. **Acquisition strategy**
    - Choose Buy tool(s) or Build in-house and enter one-time + annual costs.
 4. **Debts & Risk (optional)**
-   - Toggle Technical Debt and/or CSAT Debt. Enter 100% annual impact, remediation cost (optional), and residual %.
+   - Toggle Technical Debt and/or CSAT Debt.
+   - For each enabled debt, specify a dedicated “Non‑automated portion applied to [debt] (%)” (defaults from scope, but can differ per debt).
+   - Enter 100% annual impact, remediation cost (optional), and residual %.
 5. **Additional Benefits (optional)**
    - Check any categories that apply and provide annual value, methodology, and typical assumptions.
 6. **Manual vs Automated time per change**
@@ -263,6 +285,10 @@ Selected items appear in the web output and are included in the Markdown report 
 The downloaded JSON includes inputs and computed outputs. Key fields:
 - Inputs: `years`, `automation_title`, `automation_description`, device counts, `tasks_per_year`, `automation_coverage_pct`, `hourly_rate`, manual/automated minutes, `acquisition_strategy`, `cost_breakdown`, debts toggles and parameters, `benefits`.
 - Outputs: `annual_hours_saved`, `annual_cost_savings`, `annual_total_benefit`, `annual_run_cost_effective`, `annual_net_benefit`, `project_cost`, `discount_rate_pct`, `cash_flows`, `npv`, `payback`, `irr`, `cum_1`, `cum_3`, `cum_5`.
+
+Notes:
+- Debts now have separate applied non‑automated portions for Technical and CSAT (`debts_non_auto_pct_tech`, `debts_non_auto_pct_csat`).
+- Reports clarify CSAT debt before and after remediation, and applied impact percentages.
 
 ## Notes and Assumptions
 - NPV/IRR are computed from Year 0 to Year 5 using your discount rate.
