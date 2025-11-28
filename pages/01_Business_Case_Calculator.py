@@ -250,6 +250,7 @@ def build_markdown_report(
     csat_debt_impact_pct: Optional[float],
     csat_debt_residual_pct: Optional[float],
     appendix_md: str,
+    dependencies: List[Dict[str, Any]],
 ) -> str:
     """
     Construct a comprehensive Markdown report for the business case.
@@ -428,6 +429,26 @@ def build_markdown_report(
     except Exception:
         soft_benefits_section = ""
 
+    # Dependencies & External Interfaces section (always present)
+    dep_block = ""
+    try:
+        dep_lines = ["## Dependencies & External Interfaces"]
+        has_any = False
+        for d in (dependencies or []):
+            name = (d or {}).get("name")
+            details = ((d or {}).get("details") or "").strip()
+            if name:
+                has_any = True
+                if details:
+                    dep_lines.append(f"- {name}: {details}")
+                else:
+                    dep_lines.append(f"- {name}")
+        if not has_any:
+            dep_lines.append("_No external dependencies were identified._")
+        dep_block = "\n" + "\n".join(dep_lines) + "\n"
+    except Exception:
+        dep_block = "\n## Dependencies & External Interfaces\n_No external dependencies were identified._\n"
+
     report = f"""# {title} – Network Automation Business Case
 
 ## NABCD(E) One-Page Summary
@@ -566,7 +587,8 @@ Applied automation coverage: {automation_coverage_pct:.1f}% → debt impact appl
 - Built-in repeatability and compliance: automation enforces standard patterns.  
 - Reduced human error lowers outage risk and rework.  
 - Clear audit trail for changes (via ITSM and automation logs).  
-{soft_benefits_section}
+
+{dep_block}{soft_benefits_section}
 
 ## Exit / Ask
 
@@ -644,6 +666,10 @@ def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def csat_debt_calculator():
+    st.write("Future Capability")
+
+
 # ---------- Streamlit app ----------
 
 
@@ -678,7 +704,7 @@ def main():
         "Automation Business Case content appears below. Use the Calculator tab for quick arithmetic calculations."
     )
     # --- Tabs ---
-    tab_bc, tab_calc = st.tabs(["Business Case", "Calculator"])
+    tab_bc, tab_calc, tab_csat = st.tabs(["Business Case", "Calculator", "CSAT Debt Calculator"])
     with tab_bc:
 
         # ---- Scenario loader (optional) ----
@@ -778,12 +804,92 @@ def main():
             help="List anything intentionally excluded or not automated in this solution. Markdown is supported.",
         )
 
+        # ---- Dependencies & External Interfaces (stateful defs) ----
+        # Initialize or reuse shared dep_defs across pages
+        if "dep_defs" not in st.session_state:
+            st.session_state["dep_defs"] = [
+                {
+                    "key": "network_infra",
+                    "label": "Network Infrastructure",
+                    "default": True,
+                    "details": False,
+                    "help": "The automation will act on some or all of the organization's network infrastructure (switches, appliances, routers, etc.).",
+                },
+                {
+                    "key": "network_controllers",
+                    "label": "Network Controllers",
+                    "default": False,
+                    "details": True,
+                    "help": "Controller platforms that abstract device APIs (e.g., Cisco APIC/ND). Provide which controller(s) and scope.",
+                },
+                {
+                    "key": "revision_control",
+                    "label": "Revision Control system",
+                    "default": True,
+                    "details": True,
+                    "help": "System for versioning configuration/templates and code (e.g., GitHub, GitLab, Bitbucket).",
+                    "default_detail": "GitHub",
+                },
+                {
+                    "key": "itsm",
+                    "label": "ITSM/Change Management System",
+                    "default": False,
+                    "details": True,
+                    "help": "Ticketing/approval workflow (e.g., ServiceNow, Jira Service Management). Include integration points.",
+                },
+                {
+                    "key": "authn",
+                    "label": "Authentication System",
+                    "default": False,
+                    "details": True,
+                    "help": "Identity/RBAC, secrets, SSO (e.g., Okta, Azure AD, LDAP, Vault). Specify how access is controlled.",
+                },
+                {
+                    "key": "ipams",
+                    "label": "IPAMS Systems",
+                    "default": False,
+                    "details": True,
+                    "help": "IP address management and DNS (e.g., Infoblox, BlueCat). Describe lookups/updates involved.",
+                },
+                {
+                    "key": "inventory",
+                    "label": "Inventory Systems",
+                    "default": False,
+                    "details": True,
+                    "help": "Source of truth/CMDB/inventory (e.g., NetBox, InfraHub, ServiceNow CMDB). What data do you read/write?",
+                },
+                {
+                    "key": "design_intent",
+                    "label": "Design Data/Intent Systems",
+                    "default": False,
+                    "details": True,
+                    "help": "Systems holding golden intent or design models (InfraHub, Custom DB).",
+                },
+                {
+                    "key": "observability",
+                    "label": "Observability System",
+                    "default": False,
+                    "details": True,
+                    "help": "Telemetry/monitoring/logs/traces (e.g., SuzieQ, Prometheus).",
+                },
+                {
+                    "key": "vendor_mgmt",
+                    "label": "Vendor Tool/Management System",
+                    "default": False,
+                    "details": True,
+                    "help": "(e.g., Cisco DNAC, Wireless Controllers, Miraki, Arista CVP, Aruba Central, Juniper Apstra).",
+                },
+            ]
+        dep_defs = st.session_state["dep_defs"]
+
+        years = 5
+
         years = 5
 
         # Prepare container for soft benefits selections (used across UI and report)
         soft_benefits_selected: List[Dict[str, Any]] = []
 
-        # -------- Sidebar for volume, cost & additional benefits --------
+        # -------- Sidebar for volume, dependencies, cost & additional benefits --------
         with st.sidebar:
             st.image("images/EIA Logo FINAL small_Round.png", width=75)
             # st.markdown("---")
@@ -1070,6 +1176,8 @@ def main():
                     help="Optional: explain how one-time and ongoing costs were estimated.",
                 )
 
+            # (moved) Dependencies & External Interfaces will appear just above Additional Benefits
+
             # Debts & Risk (Optional) – Technical debt modeled from automation coverage
             st.markdown("---")
             _debts = st.expander("Debts & Risk (Optional)", expanded=False)
@@ -1287,7 +1395,9 @@ def main():
                 st.caption(
                     "Project cost is incurred in Year 0; annual run cost recurs each year."
                 )
+            # Green separator, then Additional Benefits
             utils.thick_hr(color="red", thickness=5)
+
             # st.markdown("---")
             _ben = st.expander("Additional Benefits (Optional)", expanded=False)
             with _ben:
@@ -1464,6 +1574,35 @@ def main():
             else:
                 st.caption("No additional benefits selected.")
             utils.thick_hr(color="green", thickness=5)
+
+            # Dependencies & External Interfaces (placed above Intangible / Soft Benefits)
+            _deps_bottom = st.expander("Dependencies & External Interfaces", expanded=False)
+            with _deps_bottom:
+                st.caption("Select the external systems this automation will interact with and add details where applicable.")
+                deps_selected = []
+                for d in dep_defs:
+                    checked = st.checkbox(
+                        d["label"],
+                        key=f"dep_{d['key']}",
+                        value=bool(sv(f"dep_{d['key']}", d.get("default", False))),
+                        help=d.get("help", None),
+                    )
+                    detail_text = ""
+                    if checked and d.get("details"):
+                        default_detail = d.get("default_detail", "")
+                        if d["key"] == "revision_control":
+                            default_detail = "GitHub"
+                        detail_text = st.text_input(
+                            f"Details for {d['label']}",
+                            value=str(sv(f"dep_{d['key']}_details", default_detail)),
+                            key=f"dep_{d['key']}_details",
+                        )
+                    if checked:
+                        deps_selected.append({"name": d["label"], "details": detail_text.strip()})
+
+            # Hold for later use in summary/report/JSON
+            dependencies_selected = deps_selected
+
             # Intangible/Soft Benefits (Optional) — moved to last in sidebar
             # st.markdown("---")
             _soft = st.expander("Intangible / Soft Benefits (Optional)", expanded=False)
@@ -2280,6 +2419,15 @@ def main():
                 "Standardized, repeatable workflows reduce human error, enforce policy/compliance, and create a clear audit trail for every change."
             )
 
+            # Dependencies & External Interfaces summary
+            if dependencies_selected:
+                st.markdown("**Dependencies & External Interfaces** –")
+                for d in dependencies_selected:
+                    if d.get("details"):
+                        st.text(f"- {d['name']}: {d['details']}")
+                    else:
+                        st.text(f"- {d['name']}")
+
             st.markdown("**Exit / Ask** –")
             st.text(
                 f"Approve ~${project_cost:,.0f} in initial funding plus ~${annual_run_cost:,.0f}/year to make automated change the default operating model, "
@@ -2397,6 +2545,8 @@ def main():
                     # Acquisition details (Build-specific developer selection flags)
                     "build_dev_by_networking_staff": bool(st.session_state.get("build_dev_by_networking_staff", False)),
                     "build_dev_by_software_devs": bool(st.session_state.get("build_dev_by_software_devs", False)),
+                    # Dependencies & External Interfaces (checked only)
+                    "dependencies": dependencies_selected,
                     "cost_breakdown": cost_breakdown,
                     # Intangible / Soft Benefits selections
                     "soft_benefits": soft_benefits_selected,
@@ -2515,19 +2665,38 @@ def main():
                 st.code(preview, language="markdown")
 
     with tab_calc:
-        st.subheader("Simple Calculator (Embedded)")
-        st.caption("Powered by calculator.net – opens inline.")
-        try:
-            import streamlit.components.v1 as components
+        st.subheader("Simple Calculator")
+        st.caption("Quick four-function calculator. External calculators often block embedding; use the link below if you prefer.")
 
-            components.iframe(
-                "https://www.calculator.net/math-calculator.html", height=700
-            )
-        except Exception:
-            st.link_button(
-                "Open Calculator in new tab",
-                "https://www.calculator.net/math-calculator.html",
-            )
+        col_a, col_op, col_b = st.columns([3, 2, 3])
+        with col_a:
+            a = st.number_input("A", value=0.0, key="calc_a")
+        with col_op:
+            op = st.selectbox("Operator", ["+", "-", "×", "÷"], index=0, key="calc_op")
+        with col_b:
+            b = st.number_input("B", value=0.0, key="calc_b")
+
+        res = None
+        if op == "+":
+            res = a + b
+        elif op == "-":
+            res = a - b
+        elif op == "×":
+            res = a * b
+        elif op == "÷":
+            res = None if b == 0 else a / b
+
+        st.markdown("**Result**")
+        if op == "÷" and b == 0:
+            st.warning("Division by zero is undefined.")
+        else:
+            st.info(f"{a} {op} {b} = {res}")
+
+        st.caption("Need a full scientific calculator?")
+        st.markdown("[Open Calculator in new tab](https://www.calculator.net/math-calculator.html)")
+
+    with tab_csat:
+        csat_debt_calculator()
 
 
 # Standard call to the main() function.
