@@ -70,6 +70,35 @@ def main():
         icon="🧭",
     )
 
+    # About the Solution Wizard (NAF Framework)
+    st.markdown("---")
+    st.subheader("About the Solution Wizard (NAF Framework)")
+    try:
+        st.page_link(
+            "pages/03_Solution_Wizard.py",
+            label="Open Solution Wizard",
+            icon="🧭",
+        )
+    except Exception:
+        st.caption("Open the 'Solution Wizard' from the left navigation.")
+
+    st.markdown(
+        """
+        ### Purpose of the Wizard
+        The wizard serves as a structured thinking tool and a second set of eyes to ensure you haven’t overlooked any key aspects of your automation project. It helps you organize your approach by prompting you to clarify what your automation system will do, who it will serve, and how it will be built and supported. This ensures you have a comprehensive understanding before making investment or development decisions.
+
+        ### When to Use the Wizard
+        - If you want to validate your project plan and make sure all components are addressed, the wizard is a helpful resource.
+        - If you’ve already thought through the NAF Framework and have your business case details, you can skip the wizard and use the Business Case Calculator directly.
+        - The wizard can also assist in generating text for the "Detailed solution description" box, helping you articulate your automation system clearly.
+
+        ### Key Points to Remember
+        - A thorough grasp of your automation system’s purpose, target users, build/support strategy, and integration points is essential for filling out the Business Case Calculator effectively.
+        - The NAF Framework is flexible and inclusive, allowing you to use your own tools and operational practices while ensuring your automation solution is well-structured and future-proof.
+        - This wizard and the underlying NAF Framework are here to help you build robust, maintainable, and business-aligned network automation solutions.
+        """
+    )
+
     st.info(
         "Tip: You can always come back to this page from the sidebar to choose a different task."
     )
