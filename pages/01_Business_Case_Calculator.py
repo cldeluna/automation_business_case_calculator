@@ -249,6 +249,8 @@ def build_markdown_report(
     csat_debt_base_annual: Optional[float],
     csat_debt_impact_pct: Optional[float],
     csat_debt_residual_pct: Optional[float],
+    csat_debt_annual_before: Optional[float],
+    csat_debt_annual_after: Optional[float],
     appendix_md: str,
     dependencies: List[Dict[str, Any]],
 ) -> str:
@@ -554,17 +556,24 @@ Assumptions:
 
 ### Debt & Risk modeling details
 
-Applied automation coverage: {automation_coverage_pct:.1f}% → debt impact applied: {100 - automation_coverage_pct:.1f}%
+Applied automation coverage (scope): {automation_coverage_pct:.1f}%
+
+{('Applied non-automated portion (Technical debt): ' + f"{float(st.session_state.get('debts_non_auto_pct_tech', max(0.0, 100.0 - automation_coverage_pct))):.1f}%") if tech_debt_included else ''}
+
+{('Applied non-automated portion (CSAT debt): ' + f"{float(st.session_state.get('debts_non_auto_pct_csat', max(0.0, 100.0 - automation_coverage_pct))):.1f}%") if csat_debt_included else ''}
 
 {('- Technical debt: base at 100% = $' + f"{(tech_debt_base_annual or 0):,.2f}" + 
    (', applied impact = ' + f"{(tech_debt_impact_pct or 0)*100:.0f}%" if tech_debt_impact_pct is not None else '') + 
    (', residual after remediation = ' + f"{(tech_debt_residual_pct or 0):.0f}%" if tech_debt_residual_pct is not None else '')
   ) if tech_debt_included else ''}
 
-{('- CSAT debt: base at 100% = $' + f"{(csat_debt_base_annual or 0):,.2f}" + 
-   (', applied impact = ' + f"{(csat_debt_impact_pct or 0)*100:.0f}%" if csat_debt_impact_pct is not None else '') + 
-   (', residual after remediation = ' + f"{(csat_debt_residual_pct or 0):.0f}%" if csat_debt_residual_pct is not None else '')
-  ) if csat_debt_included else ''}
+{(
+  '- CSAT debt: base at 100% = $' + f"{(csat_debt_base_annual or 0):,.2f}" +
+  (', applied impact (non-automated portion) = ' + f"{(csat_debt_impact_pct or 0)*100:.0f}%" if csat_debt_impact_pct is not None else '') +
+  (', annual before remediation = $' + f"{(csat_debt_annual_before or 0):,.0f}" if csat_debt_annual_before is not None else '') +
+  (', residual after remediation = ' + f"{(csat_debt_residual_pct or 0):.0f}%" if csat_debt_residual_pct is not None else '') +
+  (', annual after remediation = $' + f"{(csat_debt_annual_after or 0):,.0f}" if csat_debt_annual_after is not None else '')
+ ) if csat_debt_included else ''}
 
 ## Cost Modeling
 
@@ -667,6 +676,45 @@ def benefit_by_category(category: str) -> Optional[Dict[str, Any]]:
 
 
 def csat_debt_calculator():
+    """
+    Customer Satisfaction (CSAT) Debt Calculator UI and logic.
+
+    Purpose
+    - Helps estimate annual CSAT-related costs using CES (Customer Effort Score) response mixes and per-response cost weights.
+    - Produces figures that inform the Debts & Risk (Optional) section (CSAT debt inputs) in the main Business Case sidebar.
+
+    Major UI Sections
+    - Methodology pane (left): Explains CES and the cost model. Includes a "Quality of calculations" rating saved to `csat_quality_rating`.
+    - Inputs (top):
+      - `Changes per month` → derives `Changes per year` (read-only).
+      - `Engineer fully-loaded cost (USD/hour)` → used by the minutes-based weight helper.
+      - `Responses per change` and `Survey response rate (%)` → drive expected responses/year.
+      - Optional auto-calc of expected responses/year from inputs.
+    - Sentiment distribution and counts:
+      - Radio selector for customer sentiment assumption updates Happy/Neutral/Sad counts unless manual override is enabled.
+      - Manual override toggle allows direct editing of counts without auto-application from the radio.
+    - CSAT Weights expander:
+      - Per-response weights (Happy/Neutral/Sad) representing cost per response.
+      - Minutes-based helper for Neutral/Sad that can link to engineer hourly rate to compute weights from minutes and cost per hour.
+
+    Key Calculations
+    - CES responses volume = (Changes/month × 12) × (Responses/change) × (Response rate%).
+    - Total cost = Σ(count × weight) across sentiment buckets; average cost/response shown for clarity.
+    - Annual CSAT cost = Avg cost/response × Responses/year.
+
+    Session State & Widget Keys
+    - Persistent keys: `csat_*` (e.g., `csat_w_neutral`, `csat_min_neutral`, `csat_changes_per_month`, etc.).
+    - Widget-only keys: prefixed with `_csat_*` for inputs that should not be mutated post-render.
+    - Important constraint: Do not write to widget-bound keys after inputs render to avoid StreamlitAPIException; update only persistent `csat_*` before widget creation, or via widget binding to those keys.
+
+    Integration Points
+    - Debts panel (main calculator) references the annual CSAT cost produced here to seed/justify the "CSAT debt annual cost at 100% impact" input.
+    - Markdown report includes CSAT debt modeling details (base at 100%, applied impact, before/after remediation).
+    - Scenario JSON export includes CSAT debt fields used across the app.
+
+    Side Effects
+    - Persists user selections and computed values into `st.session_state` under `csat_*` keys for reuse across app reruns and other pages.
+    """
     st.subheader("Customer Satisfaction (CSAT) Debt Calculator")
     st.caption(
         "Use this calculator to estimate Customer Satisfaction related costs and inform the 'Debts & Risk (Optional)' CSAT inputs in the main calculator sidebar."
@@ -702,8 +750,11 @@ def csat_debt_calculator():
         quality_rating = st.radio(
             "Quality of calculations",
             options=quality_options,
-            index=(quality_options.index(default_quality)
-                   if default_quality in quality_options else 1),
+            index=(
+                quality_options.index(default_quality)
+                if default_quality in quality_options
+                else 1
+            ),
             help=(
                 "Select the quality level describing how these calculations were derived. "
                 "Gold = direct measured data. Silver = partial data plus normalization. "
@@ -1073,133 +1124,148 @@ def csat_debt_calculator():
         "Tip: CES (faces) = (Happy − Sad) ÷ Total responses. Range −1 to +1. Higher is better; 0 is balanced."
     )
 
-    # Weights UI at bottom with guidance
-    utils.thick_hr(color="grey", thickness=5)
-    st.subheader("CSAT Weights (Cost per Response)")
-    st.caption(
-        "Weights represent the dollar cost per response for each CES category. 'Happy' (easy) should typically be $0."
-    )
-    st.markdown(
-        """
-        **How to use the weights**
-        - Multiply the number of responses for each category by its weight. For example:  
-          Total Cost = (Happy Count × 0) + (Neutral Count × 15) + (Sad Count × 25)
-        - Then divide by the total number of responses to get the average cost per visit.
-
-        To weight Sad, Neutral, and Happy responses in your cost model, assign each response a cost multiplier based on its impact on resources, support effort, and user experience. The weights should reflect how much extra work or cost is associated with each level of effort.
-
-        **How to assign weights (example ranges)**
-        - Happy (Easy): minimal extra cost. Assign a low or zero weight (e.g., $0–$5 per response).
-        - Neutral (Medium): some extra work or minor delays. Assign a moderate weight (e.g., $10–$15 per response).
-        - Sad (Hard): high friction, high user frustration, more tickets, escalations, wasted time. Assign a higher weight (e.g., $20–$30 per response).
-
-        **Choosing the right weights**
-        - Base your weights on actual support costs, time spent, and business impact.
-        - Adjust if your data shows Neutral responses cause more (or less) cost than Sad responses.
-        - The goal is to reflect real resource usage, not just sentiment. This helps quantify the true cost of customer effort and prioritize improvements where they save the most money.
-        """
-    )
-
-    # Precompute linked weights before inputs render
-    # Prefer current widget values if present (ensures immediate response to minute edits)
-    _pre_min_neutral = int(
-        st.session_state.get("_csat_min_neutral_minutes",
-                              st.session_state.get("csat_min_neutral_minutes", 20))
-    )
-    _pre_min_sad = int(
-        st.session_state.get("_csat_min_sad_minutes",
-                              st.session_state.get("csat_min_sad_minutes", 45))
-    )
-    # Keep persistent minutes in sync for downstream logic
-    st.session_state["csat_min_neutral_minutes"] = _pre_min_neutral
-    st.session_state["csat_min_sad_minutes"] = _pre_min_sad
-    _pre_eng_rate = float(st.session_state.get("csat_hourly_rate", 75.0)) if "csat_hourly_rate" in st.session_state else float(csat_hourly_rate)
-    _pre_cost_neutral = _pre_eng_rate * (_pre_min_neutral / 60.0) if _pre_min_neutral else 0.0
-    _pre_cost_sad = _pre_eng_rate * (_pre_min_sad / 60.0) if _pre_min_sad else 0.0
-    if st.session_state.get("csat_link_weights_to_minutes", True):
-        st.session_state["csat_w_neutral"] = float(_pre_cost_neutral)
-        st.session_state["csat_w_sad"] = float(_pre_cost_sad)
-    cw1, cw2, cw3 = st.columns(3)
-    with cw1:
-        new_w_happy = st.number_input(
-            "Happy weight (cost/response $)",
-            min_value=0.0,
-            value=w_happy,
-            step=1.0,
-            key="_csat_w_happy",
+    with st.expander("CSAT Weights (Cost per Response)", expanded=False):
+        # Weights UI at bottom with guidance
+        utils.thick_hr(color="grey", thickness=5)
+        st.subheader("CSAT Weights (Cost per Response)")
+        st.caption(
+            "Weights represent the dollar cost per response for each CES category. 'Happy' (easy) should typically be $0."
         )
-    with cw2:
-        new_w_neutral = st.number_input(
-            "Neutral weight (cost/response $)",
-            min_value=0.0,
-            step=1.0,
-            key="csat_w_neutral",
-            disabled=st.session_state.get("csat_link_weights_to_minutes", True),
-        )
-    with cw3:
-        new_w_sad = st.number_input(
-            "Sad weight (cost/response $)",
-            min_value=0.0,
-            step=1.0,
-            key="csat_w_sad",
-            disabled=st.session_state.get("csat_link_weights_to_minutes", True),
+        st.markdown(
+            """
+            **How to use the weights**
+            - Multiply the number of responses for each category by its weight. For example:  
+              Total Cost = (Happy Count × 0) + (Neutral Count × 15) + (Sad Count × 25)
+            - Then divide by the total number of responses to get the average cost per visit.
+
+            To weight Sad, Neutral, and Happy responses in your cost model, assign each response a cost multiplier based on its impact on resources, support effort, and user experience. The weights should reflect how much extra work or cost is associated with each level of effort.
+
+            **How to assign weights (example ranges)**
+            - Happy (Easy): minimal extra cost. Assign a low or zero weight (e.g., $0–$5 per response).
+            - Neutral (Medium): some extra work or minor delays. Assign a moderate weight (e.g., $10–$15 per response).
+            - Sad (Hard): high friction, high user frustration, more tickets, escalations, wasted time. Assign a higher weight (e.g., $20–$30 per response).
+
+            **Choosing the right weights**
+            - Base your weights on actual support costs, time spent, and business impact.
+            - Adjust if your data shows Neutral responses cause more (or less) cost than Sad responses.
+            - The goal is to reflect real resource usage, not just sentiment. This helps quantify the true cost of customer effort and prioritize improvements where they save the most money.
+            """
         )
 
-    st.session_state["csat_w_happy"] = float(new_w_happy)
-
-    # Separator and minutes-based helper UI at the very bottom
-    utils.thick_hr(color="grey", thickness=5)
-    st.markdown("**Minutes-based weight helper**")
-    st.caption(
-        "Estimate Neutral/Sad cost per response from remediation time and the engineer fully-loaded rate above."
-    )
-
-    min_neutral_default = int(st.session_state.get("csat_min_neutral_minutes", 20))
-    min_sad_default = int(st.session_state.get("csat_min_sad_minutes", 45))
-
-    # Two-column layout: Neutral (left), Sad (right)
-    eng_rate = float(st.session_state.get("csat_hourly_rate", 75.0)) if "csat_hourly_rate" in st.session_state else float(csat_hourly_rate)
-    cL, cR = st.columns(2)
-    with cL:
-        st.markdown("**Neutral**")
-        min_neutral = st.number_input(
-            "Neutral minutes to remediate",
-            min_value=0,
-            value=min_neutral_default,
-            step=5,
-            key="_csat_min_neutral_minutes",
-            help="Typical minutes of engineering effort to remediate a neutral (medium) response",
+        # Precompute linked weights before inputs render
+        # Prefer current widget values if present (ensures immediate response to minute edits)
+        _pre_min_neutral = int(
+            st.session_state.get(
+                "_csat_min_neutral_minutes",
+                st.session_state.get("csat_min_neutral_minutes", 20),
+            )
         )
-        _frac_neutral = (float(min_neutral) / 60.0) if min_neutral else 0.0
-        _cost_neutral_calc = eng_rate * _frac_neutral
-        st.metric("% of hour", value=f"{(_frac_neutral * 100):.1f}%")
-        st.metric("Calc cost ($)", value=f"${_cost_neutral_calc:,.2f}")
-    with cR:
-        st.markdown("**Sad**")
-        min_sad = st.number_input(
-            "Sad minutes to remediate",
-            min_value=0,
-            value=min_sad_default,
-            step=5,
-            key="_csat_min_sad_minutes",
-            help="Typical minutes of engineering effort to remediate a sad (hard) response",
+        _pre_min_sad = int(
+            st.session_state.get(
+                "_csat_min_sad_minutes",
+                st.session_state.get("csat_min_sad_minutes", 45),
+            )
         )
-        _frac_sad = (float(min_sad) / 60.0) if min_sad else 0.0
-        _cost_sad_calc = eng_rate * _frac_sad
-        st.metric("% of hour", value=f"{(_frac_sad * 100):.1f}%")
-        st.metric("Calc cost ($)", value=f"${_cost_sad_calc:,.2f}")
+        # Keep persistent minutes in sync for downstream logic
+        st.session_state["csat_min_neutral_minutes"] = _pre_min_neutral
+        st.session_state["csat_min_sad_minutes"] = _pre_min_sad
+        _pre_eng_rate = (
+            float(st.session_state.get("csat_hourly_rate", 75.0))
+            if "csat_hourly_rate" in st.session_state
+            else float(csat_hourly_rate)
+        )
+        _pre_cost_neutral = (
+            _pre_eng_rate * (_pre_min_neutral / 60.0) if _pre_min_neutral else 0.0
+        )
+        _pre_cost_sad = _pre_eng_rate * (_pre_min_sad / 60.0) if _pre_min_sad else 0.0
+        if st.session_state.get("csat_link_weights_to_minutes", True):
+            st.session_state["csat_w_neutral"] = float(_pre_cost_neutral)
+            st.session_state["csat_w_sad"] = float(_pre_cost_sad)
+        cw1, cw2, cw3 = st.columns(3)
+        with cw1:
+            new_w_happy = st.number_input(
+                "Happy weight (cost/response $)",
+                min_value=0.0,
+                value=w_happy,
+                step=1.0,
+                key="_csat_w_happy",
+            )
+        with cw2:
+            new_w_neutral = st.number_input(
+                "Neutral weight (cost/response $)",
+                min_value=0.0,
+                step=1.0,
+                key="csat_w_neutral",
+                disabled=st.session_state.get("csat_link_weights_to_minutes", True),
+            )
+        with cw3:
+            new_w_sad = st.number_input(
+                "Sad weight (cost/response $)",
+                min_value=0.0,
+                step=1.0,
+                key="csat_w_sad",
+                disabled=st.session_state.get("csat_link_weights_to_minutes", True),
+            )
 
-    # Persist minutes
-    st.session_state["csat_min_neutral_minutes"] = int(min_neutral)
-    st.session_state["csat_min_sad_minutes"] = int(min_sad)
+        st.session_state["csat_w_happy"] = float(new_w_happy)
 
-    # Link behavior toggle (affects next rerun precompute)
-    st.checkbox(
-        "Link weights to minutes and engineer rate",
-        key="csat_link_weights_to_minutes",
-        value=st.session_state.get("csat_link_weights_to_minutes", True),
-        help="When enabled, Neutral and Sad weights are set from minutes × engineer rate and stay in sync.",
-    )
+        # Separator and minutes-based helper UI at the very bottom
+        utils.thick_hr(color="grey", thickness=5)
+        st.markdown("**Minutes-based weight helper**")
+        st.caption(
+            "Estimate Neutral/Sad cost per response from remediation time and the engineer fully-loaded rate above."
+        )
+
+        min_neutral_default = int(st.session_state.get("csat_min_neutral_minutes", 20))
+        min_sad_default = int(st.session_state.get("csat_min_sad_minutes", 45))
+
+        # Two-column layout: Neutral (left), Sad (right)
+        eng_rate = (
+            float(st.session_state.get("csat_hourly_rate", 75.0))
+            if "csat_hourly_rate" in st.session_state
+            else float(csat_hourly_rate)
+        )
+        cL, cR = st.columns(2)
+        with cL:
+            st.markdown("**Neutral**")
+            min_neutral = st.number_input(
+                "Neutral minutes to remediate",
+                min_value=0,
+                value=min_neutral_default,
+                step=5,
+                key="_csat_min_neutral_minutes",
+                help="Typical minutes of engineering effort to remediate a neutral (medium) response",
+            )
+            _frac_neutral = (float(min_neutral) / 60.0) if min_neutral else 0.0
+            _cost_neutral_calc = eng_rate * _frac_neutral
+            st.metric("% of hour", value=f"{(_frac_neutral * 100):.1f}%")
+            st.metric("Calc cost ($)", value=f"${_cost_neutral_calc:,.2f}")
+        with cR:
+            st.markdown("**Sad**")
+            min_sad = st.number_input(
+                "Sad minutes to remediate",
+                min_value=0,
+                value=min_sad_default,
+                step=5,
+                key="_csat_min_sad_minutes",
+                help="Typical minutes of engineering effort to remediate a sad (hard) response",
+            )
+            _frac_sad = (float(min_sad) / 60.0) if min_sad else 0.0
+            _cost_sad_calc = eng_rate * _frac_sad
+            st.metric("% of hour", value=f"{(_frac_sad * 100):.1f}%")
+            st.metric("Calc cost ($)", value=f"${_cost_sad_calc:,.2f}")
+
+        # Persist minutes
+        st.session_state["csat_min_neutral_minutes"] = int(min_neutral)
+        st.session_state["csat_min_sad_minutes"] = int(min_sad)
+
+        # Link behavior toggle (affects next rerun precompute)
+        st.checkbox(
+            "Link weights to minutes and engineer rate",
+            key="csat_link_weights_to_minutes",
+            value=st.session_state.get("csat_link_weights_to_minutes", True),
+            help="When enabled, Neutral and Sad weights are set from minutes × engineer rate and stay in sync.",
+        )
 
 
 # ---------- Streamlit app ----------
@@ -1267,10 +1333,36 @@ def main():
         utils.thick_hr(color="grey", thickness=5)
         st.subheader("Automation Initiative Details")
 
+        # First sentence
         st.write(
             "Enter the things you already know as a network engineer "
-            "(how often, how long, plus optional benefits). "
-            "The app converts that into business metrics (NPV, IRR, payback), "
+            "(how often, how long, plus optional benefits)."
+        )
+
+        # Inserted introduction about the NAF Framework wizard
+        st.warning(
+            "It's best to have the details of your solution before filling out the Business Case Calculator. "
+            "Use the Solution Wizard to structure your plan first if needed."
+        )
+        try:
+            st.page_link(
+                "pages/03_Solution_Wizard.py",
+                label="Open Solution Wizard",
+                icon="🧭",
+            )
+        except Exception:
+            st.caption("Open the 'Solution Wizard' from the left navigation.")
+
+        # Intro paragraph
+        st.markdown(
+            """
+            The Solution Wizard option in the left Navigation page is designed to help you structure your network automation project using the Network Automation Forum (NAF) Framework. The framework guides you to think systematically about your automation initiative, ensuring you consider all critical components—such as intent, observability, execution, and support—before moving forward. The wizard is not mandatory for filling out the Business Case Calculator; if you've already worked through these steps externally and have all the relevant details, please continue.  We recommend starting with the sections in the left navigation to structure your plan first and fill in the manual and automated times below. When you are done, click the Calculate button to run the business case.  Remember to generate and save your report and save your scenario before you leave the page.
+            """
+        )
+
+        # Remaining original sentences
+        st.write(
+            "The Business Case calulator converts your inputs into business metrics (NPV, IRR, payback), "
             "a NABCD(E) summary, and a Markdown report you can share with CXOs."
         )
 
@@ -1309,6 +1401,17 @@ def main():
 
         with col_tips:
             st.subheader("Design Tips – Questions to guide your solution")
+            st.caption(
+                "Tip: The Solution Wizard can help you develop content for the 'Detailed solution description (Markdown supported)' field using the NAF Automation Framework."
+            )
+            try:
+                st.page_link(
+                    "pages/03_Solution_Wizard.py",
+                    label="Open Solution Wizard",
+                    icon="🧭",
+                )
+            except Exception:
+                st.caption("Open the 'Solution Wizard' from the left navigation.")
             st.markdown(
                 "\n".join(
                     [
@@ -1720,161 +1823,217 @@ def main():
                 st.caption(
                     "Technical debt is assumed to impact the non-automated portion of the estate."
                 )
-                include_tech_debt = st.checkbox(
+                # Include toggles inside expander
+                include_tech_debt = _debts.checkbox(
                     "Include technical debt as an additional annual cost",
                     value=bool(sv("include_tech_debt", False)),
                     help=(
-                        "Annual technical debt cost is scaled by (1 − automation%). "
+                        "Annual technical debt cost is scaled by the applied non‑automated portion. "
                         "Example: at 80% automation, 20% impact applies."
                     ),
+                    key="_include_tech_debt",
                 )
-
-            tech_debt_annual_after = 0.0
-            tech_debt_remediation_one_time = 0.0
-            tech_reduction_pct = None
-            tech_debt_base_annual = None
-            tech_debt_impact_pct = None
-            tech_debt_residual_pct = None
-            if include_tech_debt:
-                base_tech_debt_annual = _debts.number_input(
-                    "Technical debt annual cost at 100% impact (USD/year)",
-                    min_value=0.0,
-                    value=float(sv("tech_debt_base_annual", 20000.0)),
-                    step=1000.0,
-                )
-                impact_pct = max(0.0, 1.0 - (automation_coverage_pct / 100.0))
-                tech_debt_base_annual = float(base_tech_debt_annual)
-                tech_debt_impact_pct = impact_pct
-                tech_debt_annual = base_tech_debt_annual * impact_pct
-                _debts.info(
-                    f"Calculated technical debt (annual): ${tech_debt_annual:,.0f} (impact {impact_pct*100:.0f}%)"
-                )
-
-                include_remediation = _debts.checkbox(
-                    "This automation includes technical debt remediation",
-                    value=bool(
-                        sv("tech_debt_remediation_one_time", 0.0) > 0
-                        or sv("tech_debt_residual_pct", None) is not None
-                    ),
+                include_csat_debt = _debts.checkbox(
+                    "Include CSAT (customer satisfaction) debt as an additional annual cost",
+                    value=bool(sv("include_csat_debt", False)),
                     help=(
-                        "Adds a one-time remediation cost in Year 0 and optionally reduces the ongoing annual technical debt."
+                        "Annual CSAT debt cost is scaled by the applied non‑automated portion. "
+                        "Represents churn risk, service credits, extra support load."
                     ),
+                    key="_include_csat_debt",
                 )
-                residual_pct = 100.0
-                if include_remediation:
-                    tech_debt_remediation_one_time = _debts.number_input(
-                        "One-time remediation cost (USD)",
-                        min_value=0.0,
-                        value=float(sv("tech_debt_remediation_one_time", 10000.0)),
-                        step=1000.0,
-                    )
-                    residual_pct = _debts.number_input(
-                        "Residual technical debt after remediation (%)",
+                # Initialize summary variables to avoid UnboundLocalError when sections are not enabled
+                tech_debt_annual_after = 0.0
+                tech_debt_remediation_one_time = 0.0
+                csat_debt_annual_after = 0.0
+                csat_debt_remediation_one_time = 0.0
+                # Allow overriding the applied non-automated portion for debts modeling (separate for Tech and CSAT)
+                default_non_auto = max(0.0, 100.0 - float(automation_coverage_pct))
+
+                # Technical debt subsection
+                if include_tech_debt:
+                    utils.thick_hr(color="#4b5563", thickness=2)
+                    _debts.markdown("**Technical debt settings**")
+                    debts_non_auto_pct_tech = st.number_input(
+                        "Non-automated portion applied to Technical debt (%)",
                         min_value=0.0,
                         max_value=100.0,
-                        value=float(sv("tech_debt_residual_pct", 0.0)),
+                        value=float(st.session_state.get("debts_non_auto_pct_tech", default_non_auto)),
                         step=5.0,
-                        help="Percent of the technical debt that remains annually after remediation (0% = fully remediated).",
+                        help=(
+                            "By default this mirrors the scope's non-automated portion (100 − automation%). "
+                            "Adjust if you want to model Technical debt differently than overall automation coverage."
+                        ),
+                        key="_debts_non_auto_pct_tech_input",
                     )
-                    tech_debt_residual_pct = residual_pct
+                    st.session_state["debts_non_auto_pct_tech"] = float(debts_non_auto_pct_tech)
 
-                tech_debt_annual_after = tech_debt_annual * (residual_pct / 100.0)
-                if include_remediation:
-                    tech_reduction_pct = 100.0 - float(residual_pct)
-                # Append to cost breakdown for reporting
-                cost_breakdown.append(
-                    {
-                        "name": "Technical debt (annual, adjusted by automation)",
-                        "timing": "Annual",
-                        "amount": tech_debt_annual_after,
-                    }
-                )
-                if tech_debt_remediation_one_time > 0:
-                    cost_breakdown.append(
-                        {
-                            "name": "Technical debt remediation",
-                            "timing": "One-time",
-                            "amount": tech_debt_remediation_one_time,
-                        }
-                    )
-
-            # CSAT debt (Optional) – modeled similarly, scaled by non-automated portion
-            include_csat_debt = _debts.checkbox(
-                "Include CSAT (customer satisfaction) debt as an additional annual cost",
-                value=bool(sv("include_csat_debt", False)),
-                help=(
-                    "Annual CSAT debt cost is scaled by (1 − automation%). "
-                    "Represents churn risk, service credits, extra support load."
-                ),
-            )
-            _debts.caption(
-                "Need help estimating CSAT? Use the 'CSAT Debt Calculator' tab above to model CES and annual CSAT cost, then enter values here."
-            )
-
-            csat_debt_annual_after = 0.0
-            csat_debt_remediation_one_time = 0.0
-            csat_debt_base_annual = None
-            csat_debt_impact_pct = None
-            csat_debt_residual_pct = None
-            if include_csat_debt:
-                base_csat_debt_annual = _debts.number_input(
-                    "CSAT debt annual cost at 100% impact (USD/year)",
-                    min_value=0.0,
-                    value=float(sv("csat_debt_base_annual", 15000.0)),
-                    step=1000.0,
-                )
-                impact_pct = max(0.0, 1.0 - (automation_coverage_pct / 100.0))
-                csat_debt_base_annual = float(base_csat_debt_annual)
-                csat_debt_impact_pct = impact_pct
-                csat_debt_annual = base_csat_debt_annual * impact_pct
-                _debts.info(
-                    f"Calculated CSAT debt (annual): ${csat_debt_annual:,.0f} (impact {impact_pct*100:.0f}%)"
-                )
-
-                include_csat_remediation = _debts.checkbox(
-                    "This automation includes CSAT debt remediation",
-                    value=bool(
-                        sv("csat_debt_remediation_one_time", 0.0) > 0
-                        or sv("csat_debt_residual_pct", None) is not None
-                    ),
-                    help=(
-                        "Adds a one-time CSAT remediation cost in Year 0 and optionally reduces the ongoing annual CSAT debt."
-                    ),
-                )
-                csat_residual_pct = 100.0
-                if include_csat_remediation:
-                    csat_debt_remediation_one_time = _debts.number_input(
-                        "CSAT remediation cost (one-time USD)",
+                    # Technical debt inputs and calculations
+                    base_tech_debt_annual = _debts.number_input(
+                        "Technical debt annual cost at 100% impact (USD/year)",
                         min_value=0.0,
-                        value=float(sv("csat_debt_remediation_one_time", 5000.0)),
+                        value=float(sv("tech_debt_base_annual", 20000.0)),
                         step=1000.0,
                     )
-                    csat_residual_pct = _debts.number_input(
-                        "Residual CSAT debt after remediation (%)",
-                        min_value=0.0,
-                        max_value=100.0,
-                        value=float(sv("csat_debt_residual_pct", 20.0)),
-                        step=5.0,
-                        help="Percent of the CSAT debt that remains annually after remediation.",
+                    impact_pct = float(st.session_state.get("debts_non_auto_pct_tech", max(0.0, 100.0 - automation_coverage_pct))) / 100.0
+                    tech_debt_base_annual = float(base_tech_debt_annual)
+                    tech_debt_impact_pct = impact_pct
+                    tech_debt_annual = base_tech_debt_annual * impact_pct
+                    _debts.info(
+                        f"Calculated technical debt (annual): ${tech_debt_annual:,.0f} (applied non‑automated portion {impact_pct*100:.0f}%)"
                     )
-                    csat_debt_residual_pct = csat_residual_pct
 
-                csat_debt_annual_after = csat_debt_annual * (csat_residual_pct / 100.0)
-                cost_breakdown.append(
-                    {
-                        "name": "CSAT debt (annual, adjusted by automation)",
-                        "timing": "Annual",
-                        "amount": csat_debt_annual_after,
-                    }
-                )
-                if csat_debt_remediation_one_time > 0:
+                    include_remediation = _debts.checkbox(
+                        "This automation includes technical debt remediation",
+                        value=bool(
+                            sv("tech_debt_remediation_one_time", 0.0) > 0
+                            or sv("tech_debt_residual_pct", None) is not None
+                        ),
+                        help=(
+                            "Adds a one-time remediation cost in Year 0 and optionally reduces the ongoing annual technical debt."
+                        ),
+                    )
+                    residual_pct = 100.0
+                    if include_remediation:
+                        tech_debt_remediation_one_time = _debts.number_input(
+                            "One-time remediation cost (USD)",
+                            min_value=0.0,
+                            value=float(sv("tech_debt_remediation_one_time", 10000.0)),
+                            step=1000.0,
+                        )
+                        residual_pct = _debts.number_input(
+                            "Residual technical debt after remediation (%)",
+                            min_value=0.0,
+                            max_value=100.0,
+                            value=float(sv("tech_debt_residual_pct", 0.0)),
+                            step=5.0,
+                            help="Percent of the technical debt that remains annually after remediation (0% = fully remediated).",
+                        )
+                        tech_debt_residual_pct = residual_pct
+
+                    tech_debt_annual_after = tech_debt_annual * (residual_pct / 100.0)
+                    if include_remediation:
+                        tech_reduction_pct = 100.0 - float(residual_pct)
+                    # Append to cost breakdown for reporting
                     cost_breakdown.append(
                         {
-                            "name": "CSAT debt remediation",
-                            "timing": "One-time",
-                            "amount": csat_debt_remediation_one_time,
+                            "name": "Technical debt (annual, adjusted by automation)",
+                            "timing": "Annual",
+                            "amount": tech_debt_annual_after,
                         }
                     )
+                    if tech_debt_remediation_one_time > 0:
+                        cost_breakdown.append(
+                            {
+                                "name": "Technical debt remediation",
+                                "timing": "One-time",
+                                "amount": tech_debt_remediation_one_time,
+                            }
+                        )
+
+                # CSAT debt subsection
+                if include_csat_debt:
+                    utils.thick_hr(color="#4b5563", thickness=2)
+                    _debts.markdown("**CSAT debt settings**")
+                    _debts.caption(
+                        "Need help estimating CSAT? Use the 'CSAT Debt Calculator' tab above to model CES and annual CSAT cost, then enter values here."
+                    )
+                    try:
+                        st.caption("Tip: Click the 'CSAT Debt Calculator' tab at the top of this page.")
+                        st.page_link(
+                            "pages/01_Business_Case_Calculator.py",
+                            label="Open Business Case page (then select the 'CSAT Debt Calculator' tab)",
+                            icon="📊",
+                        )
+                    except Exception:
+                        st.caption("From the top tabs, select 'CSAT Debt Calculator'.")
+                    debts_non_auto_pct_csat = st.number_input(
+                        "Non-automated portion applied to CSAT debt (%)",
+                        min_value=0.0,
+                        max_value=100.0,
+                        value=float(st.session_state.get("debts_non_auto_pct_csat", default_non_auto)),
+                        step=5.0,
+                        help=(
+                            "By default this mirrors the scope's non-automated portion (100 − automation%). "
+                            "Adjust if you want to model CSAT debt differently than overall automation coverage."
+                        ),
+                        key="_debts_non_auto_pct_csat_input",
+                    )
+                    st.session_state["debts_non_auto_pct_csat"] = float(debts_non_auto_pct_csat)
+
+                    # CSAT debt inputs and calculations
+                    base_csat_debt_annual = _debts.number_input(
+                        "CSAT debt annual cost at 100% impact (USD/year)",
+                        min_value=0.0,
+                        value=float(sv("csat_debt_base_annual", 15000.0)),
+                        step=1000.0,
+                        help=(
+                            "Annual CSAT debt assuming 0% of changes are automated (i.e., 100% impact.\n"
+                            "Model impact is scaled by the selected non‑automated portion above."
+                        ),
+                    )
+                    impact_pct = float(st.session_state.get("debts_non_auto_pct_csat", max(0.0, 100.0 - automation_coverage_pct))) / 100.0
+                    csat_debt_base_annual = float(base_csat_debt_annual)
+                    csat_debt_impact_pct = impact_pct
+                    csat_debt_annual = base_csat_debt_annual * impact_pct
+                    csat_debt_annual_before = csat_debt_annual
+                    _debts.info(
+                        f"Calculated CSAT debt (annual, before remediation): ${csat_debt_annual:,.0f} (applied non‑automated portion: {impact_pct*100:.0f}%)"
+                    )
+
+                    include_csat_remediation = _debts.checkbox(
+                        "This automation includes CSAT debt remediation",
+                        value=bool(
+                            sv("csat_debt_remediation_one_time", 0.0) > 0
+                            or sv("csat_debt_residual_pct", None) is not None
+                        ),
+                        help=(
+                            "Adds a one-time CSAT remediation cost in Year 0 and optionally reduces the ongoing annual CSAT debt."
+                        ),
+                    )
+                    csat_residual_pct = 100.0
+                    if include_csat_remediation:
+                        csat_debt_remediation_one_time = _debts.number_input(
+                            "CSAT remediation cost (one-time USD)",
+                            min_value=0.0,
+                            value=float(sv("csat_debt_remediation_one_time", 5000.0)),
+                            step=1000.0,
+                        )
+                        csat_residual_pct = _debts.number_input(
+                            "Residual CSAT debt after remediation (%)",
+                            min_value=0.0,
+                            max_value=100.0,
+                            value=float(sv("csat_debt_residual_pct", 20.0)),
+                            step=5.0,
+                            help=(
+                                "Percent of the pre‑remediation CSAT debt that remains annually after remediation.\n"
+                                "Annual after‑remediation = (annual before remediation) × residual%."
+                            ),
+                        )
+                        csat_debt_residual_pct = csat_residual_pct
+
+                    csat_debt_annual_after = csat_debt_annual * (csat_residual_pct / 100.0)
+                    if include_csat_remediation:
+                        _debts.info(
+                            f"CSAT debt after remediation (annual): ${csat_debt_annual_after:,.0f} (residual {csat_residual_pct:.0f}% of pre‑remediation)"
+                        )
+                    cost_breakdown.append(
+                        {
+                            "name": "CSAT debt (annual, adjusted by automation)",
+                            "timing": "Annual",
+                            "amount": csat_debt_annual_after,
+                        }
+                    )
+                    if csat_debt_remediation_one_time > 0:
+                        cost_breakdown.append(
+                            {
+                                "name": "CSAT debt remediation",
+                                "timing": "One-time",
+                                "amount": csat_debt_remediation_one_time,
+                            }
+                        )
+
+
 
             # Summary of costs at bottom of section (vertical for readability)
             utils.thick_hr(color="red", thickness=5)
@@ -1928,7 +2087,7 @@ def main():
                         st.write(
                             f"- CSAT debt remediation (one-time): ${csat_debt_remediation_one_time:,.0f}"
                         )
-                st.info(f"First-year total cost: ${first_year_total_cost:,.0f}")
+                st.error(f"First-year total cost: ${first_year_total_cost:,.0f}")
                 st.caption(
                     "Project cost is incurred in Year 0; annual run cost recurs each year."
                 )
