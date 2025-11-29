@@ -1515,7 +1515,7 @@ def main():
             with col_c:
                 try:
                     st.page_link(
-                        "pages/01_Business_Case_Calculator.py",
+                        "pages/20_Business_Case_Calculator.py",
                         label="Open Business Case Calculator",
                         icon="🧮",
                     )

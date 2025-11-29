@@ -40,15 +40,19 @@ Contact: <claudia@eianow.com> • https://eianow.com
   - Shows deltas for project cost, run cost, total/net benefits, NPV, IRR, and payback.
 
 ## App Pages
-- 🧮 `Business Case Calculator` (`pages/01_Business_Case_Calculator.py`)
+- ⏱️ `Simple Time Savings Calculator` (`pages/10_Simple_Time_Savings_Calculator.py`)
+  - Quick estimator for annual hours and cost savings from automation.
+  - Enter manual vs automated minutes, volume per month, automation coverage, and hourly rate.
+
+- 🧮 `Business Case Calculator` (`pages/20_Business_Case_Calculator.py`)
   - Interactive inputs and instant calculations.
   - Report builder and scenario save/load utilities.
   - Includes a CSAT Debt Calculator tab for modeling CES and CSAT costs.
 
-- 📊 `Business Case Comparison` (`pages/02_Business_Case_Comparison.py`)
+- 📊 `Business Case Comparison` (`pages/30_Business_Case_Comparison.py`)
   - Side-by-side comparison table built from two uploaded scenario JSON files.
 
-- 🧭 `Solution Wizard` (`pages/03_Solution_Wizard.py`)
+- 🧭 `Solution Wizard` (`pages/40_Solution_Wizard.py`)
   - Guides you through NAF Framework components (Presentation, Intent, Observability, Orchestration, Collector, Executor).
   - Optional: You can skip the wizard if you already have solid inputs for the calculator.
     - Collector includes a "Collection tools" selector (e.g., SuzieQ, Cisco Catalyst Center, Cisco Nexus Dashboard, Cisco ACI APIC, Arista CVP, Prometheus).
@@ -316,8 +320,9 @@ Notes:
 
 ## Project Structure
 - `Automation_BusinessCase_App.py` – Home/landing page and navigation links.
-- `pages/01_Business_Case_Calculator.py` – Main calculator, report builder, scenario save/load, ZIP download.
-- `pages/02_Business_Case_Comparison.py` – Scenario comparison tool.
+- `pages/10_Simple_Time_Savings_Calculator.py` – Lightweight time savings estimator.
+- `pages/20_Business_Case_Calculator.py` – Main calculator, report builder, scenario save/load, ZIP download.
+- `pages/30_Business_Case_Comparison.py` – Scenario comparison tool.
 
 ## Guiding Quote
 > According to Darwin's Origin of Species, it is not the most intellectual of the species that survives; it is not the strongest that survives; but the species that survives is the one that is able best to adapt and adjust to the changing environment in which it finds itself.

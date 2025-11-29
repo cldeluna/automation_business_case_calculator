@@ -55,17 +55,17 @@ def main():
 
     # Streamlit's page links (visible when running as a multipage app with a /pages directory)
     st.page_link(
-        "pages/01_Business_Case_Calculator.py",
+        "pages/20_Business_Case_Calculator.py",
         label=" Open Business Case Calculator",
         icon="🧮",
     )
     st.page_link(
-        "pages/02_Business_Case_Comparison.py",
+        "pages/30_Business_Case_Comparison.py",
         label=" Open Business Case Comparison",
         icon="📊",
     )
     st.page_link(
-        "pages/03_Solution_Wizard.py",
+        "pages/40_Solution_Wizard.py",
         label=" Open Solution Wizard",
         icon="🧭",
     )
@@ -75,7 +75,7 @@ def main():
     st.subheader("About the Solution Wizard (NAF Framework)")
     try:
         st.page_link(
-            "pages/03_Solution_Wizard.py",
+            "pages/40_Solution_Wizard.py",
             label="Open Solution Wizard",
             icon="🧭",
         )

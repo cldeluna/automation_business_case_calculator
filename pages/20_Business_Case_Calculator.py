@@ -1363,7 +1363,7 @@ def main():
         )
         try:
             st.page_link(
-                "pages/03_Solution_Wizard.py",
+                "pages/40_Solution_Wizard.py",
                 label="Open Solution Wizard",
                 icon="🧭",
             )
@@ -1435,7 +1435,7 @@ def main():
             )
             try:
                 st.page_link(
-                    "pages/03_Solution_Wizard.py",
+                    "pages/40_Solution_Wizard.py",
                     label="Open Solution Wizard",
                     icon="🧭",
                 )
@@ -1986,7 +1986,7 @@ def main():
                             "Tip: Click the 'CSAT Debt Calculator' tab at the top of this page."
                         )
                         st.page_link(
-                            "pages/01_Business_Case_Calculator.py",
+                            "pages/20_Business_Case_Calculator.py",
                             label="Open Business Case page (then select the 'CSAT Debt Calculator' tab)",
                             icon="📊",
                         )
