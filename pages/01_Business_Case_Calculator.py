@@ -1314,12 +1314,12 @@ def main():
         "Automation Business Case content appears below. Use the Calculator tab for quick arithmetic calculations."
     )
     # --- Tabs ---
-    tab_bc, tab_calc, tab_csat, tab_techdebt = st.tabs(
+    tab_bc, tab_csat, tab_techdebt, tab_calc = st.tabs(
         [
             "Business Case",
-            "Calculator",
             "CSAT Debt Calculator",
             "Techical Debt Calculator",
+            "Calculator",
         ]
     )
     with tab_bc:
@@ -3435,6 +3435,12 @@ def main():
                     preview += "\n...\n"
                 st.code(preview, language="markdown")
 
+    with tab_csat:
+        csat_debt_calculator()
+
+    with tab_techdebt:
+        tech_debt_calculator()
+
     with tab_calc:
         st.subheader("Simple Calculator")
         st.caption(
@@ -3469,12 +3475,6 @@ def main():
         st.markdown(
             "[Open Calculator in new tab](https://www.calculator.net/math-calculator.html)"
         )
-
-    with tab_csat:
-        csat_debt_calculator()
-
-    with tab_techdebt:
-        tech_debt_calculator()
 
 
 # Standard call to the main() function.
