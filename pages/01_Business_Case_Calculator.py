@@ -1383,19 +1383,31 @@ def main():
             "a NABCD(E) summary, and a Markdown report you can share with CXOs."
         )
 
+        # Ensure shared fields exist in session_state for cross-page sync
+        if "automation_title" not in st.session_state:
+            st.session_state["automation_title"] = sv(
+                "automation_title", "My new network automation project"
+            )
+        if "automation_description" not in st.session_state:
+            st.session_state["automation_description"] = sv(
+                "automation_description",
+                "Here is a short description of my my new network automation project",
+            )
+        if "solution_details_md" not in st.session_state:
+            st.session_state["solution_details_md"] = sv("solution_details_md", "")
+        if "out_of_scope" not in st.session_state:
+            st.session_state["out_of_scope"] = sv("out_of_scope", "")
+
         automation_title = st.text_input(
             "Automation initiative title",
-            value=sv("automation_title", "Access VLAN Change Automation"),
             help="Example: 'Access VLAN Change Automation', 'Firewall Rule Deployment Automation', etc.",
+            key="automation_title",
         )
 
         automation_description = st.text_area(
             "Short description / scope",
-            value=sv(
-                "automation_description",
-                "Automation of access VLAN change workflows across the campus and branch network, including config generation, deployment, and validation.",
-            ),
             help="One or two sentences describing what this automation will do and where.",
+            key="automation_description",
         )
 
         utils.thick_hr(color="grey", thickness=5)
@@ -1448,14 +1460,14 @@ def main():
             )
         solution_details_md = st.text_area(
             "Detailed solution description (Markdown supported)",
-            value=sv("solution_details_md", ""),
             help="Provide a longer-form description of the approach, components, workflow, and assumptions. You can use Markdown for formatting.",
+            key="solution_details_md",
         )
 
         out_of_scope = st.text_area(
             "Out of scope / not automated (Markdown supported)",
-            value=sv("out_of_scope", ""),
             help="List anything intentionally excluded or not automated in this solution. Markdown is supported.",
+            key="out_of_scope",
         )
 
         # ---- Dependencies & External Interfaces (stateful defs) ----
@@ -1617,9 +1629,9 @@ def main():
                 )
 
             st.markdown("---")
-            _acq = st.expander("Acquisition Strategy", expanded=True)
+            _acq = st.expander("Buy or Build", expanded=True)
             with _acq:
-                st.subheader("Acquisition Strategy")
+                st.subheader("Buy or Build")
                 st.caption("All amounts below are COSTS (expenses), in USD.")
                 _default_acq = sv("acquisition_strategy", "Build")
                 _default_index = 0 if str(_default_acq).lower().startswith("buy") else 1
@@ -2391,6 +2403,7 @@ def main():
         # -------- Main inputs: manual vs automated time --------
         utils.thick_hr(color="grey", thickness=5)
         st.subheader("Manual vs Automated Time per Change (in minutes)")
+        st.markdown("***An interaction can be a change, submission, calculation, analysis, or other task that requires execution**")
         cols_img = st.columns([1, 3, 1])
         with cols_img[1]:
             st.image("images/AnatomyOfNetChange.png", use_container_width=True)
@@ -2400,51 +2413,52 @@ def main():
         with col1:
             st.markdown("**Manual today**")
 
+
             manual_obtain_details = st.number_input(
-                "1. Obtain change details – manual (minutes/change)",
+                "1. Obtain change/task details – manual (minutes/interaction)",
                 min_value=0,
                 value=10,
                 step=1,
                 help="Change intent and devices impacted.",
             )
             manual_develop_payload = st.number_input(
-                "2. Develop command payload – manual (minutes/change)",
+                "2. Develop command payload – manual (minutes/interaction)",
                 min_value=0,
                 value=15,
                 step=1,
             )
             manual_quantify_impact = st.number_input(
-                "3. Quantify impact – manual (minutes/change)",
+                "3. Quantify impact – manual (minutes/interaction)",
                 min_value=0,
                 value=10,
                 step=1,
             )
             manual_change_mgmt = st.number_input(
-                "4. Change management, scheduling, notification – manual (minutes/change)",
+                "4. Change management, scheduling, notification – manual (minutes/interaction)",
                 min_value=0,
                 value=15,
                 step=1,
             )
             manual_state_analysis = st.number_input(
-                "5. Current state analysis & verification – manual (minutes/change)",
+                "5. Current state analysis & verification – manual (minutes/interaction)",
                 min_value=0,
                 value=15,
                 step=1,
             )
             manual_execute = st.number_input(
-                "6. Execute change – manual (minutes/change)",
+                "6. Execute change – manual (minutes/interaction)",
                 min_value=0,
                 value=10,
                 step=1,
             )
             manual_test_qa = st.number_input(
-                "7. Test & verification QA – manual (minutes/change)",
+                "7. Test & verification QA – manual (minutes/interaction)",
                 min_value=0,
                 value=15,
                 step=1,
             )
             manual_document = st.number_input(
-                "8. Documentation, notification, close out – manual (minutes/change)",
+                "8. Documentation, notification, close out – manual (minutes/interaction)",
                 min_value=0,
                 value=10,
                 step=1,
@@ -2454,50 +2468,50 @@ def main():
             st.markdown("**After automation**")
 
             auto_obtain_details = st.number_input(
-                "1. Obtain change details – automated (minutes/change)",
+                "1. Obtain change details – automated (minutes/interaction)",
                 min_value=0,
                 value=5,
                 step=1,
                 help="Time to capture intent / inputs into automation.",
             )
             auto_develop_payload = st.number_input(
-                "2. Develop command payload – automated (minutes/change)",
+                "2. Develop command payload – automated (minutes/interaction)",
                 min_value=0,
                 value=5,
                 step=1,
             )
             auto_quantify_impact = st.number_input(
-                "3. Quantify impact – automated (minutes/change)",
+                "3. Quantify impact – automated (minutes/interaction)",
                 min_value=0,
                 value=5,
                 step=1,
             )
             auto_change_mgmt = st.number_input(
-                "4. Change management, scheduling, notification – automated (minutes/change)",
+                "4. Change management, scheduling, notification – automated (minutes/interaction)",
                 min_value=0,
                 value=5,
                 step=1,
             )
             auto_state_analysis = st.number_input(
-                "5. Current state analysis & verification – automated (minutes/change)",
+                "5. Current state analysis & verification – automated (minutes/interaction)",
                 min_value=0,
                 value=5,
                 step=1,
             )
             auto_execute = st.number_input(
-                "6. Execute change – automated (minutes/change)",
+                "6. Execute change – automated (minutes/interaction)",
                 min_value=0,
                 value=5,
                 step=1,
             )
             auto_test_qa = st.number_input(
-                "7. Test & verification QA – automated (minutes/change)",
+                "7. Test & verification QA – automated (minutes/interaction)",
                 min_value=0,
                 value=5,
                 step=1,
             )
             auto_document = st.number_input(
-                "8. Documentation, notification, close out – automated (minutes/change)",
+                "8. Documentation, notification, close out – automated (minutes/interaction)",
                 min_value=0,
                 value=5,
                 step=1,

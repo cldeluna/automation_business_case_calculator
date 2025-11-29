@@ -59,6 +59,9 @@ Contact: <claudia@eianow.com> • https://eianow.com
       - Summary callouts: expected delivery date and approximate duration in months/years.
     - Solution Highlights suppress default/empty content (e.g., default timeline and default dependencies are hidden until you edit).
     - Source: https://github.com/Network-Automation-Forum/reference/tree/main/docs/Framework
+    - Initiative basics sync with Business Case:
+      - Title, Short description/scope, Out of scope, and Detailed solution description (Markdown) are shared between pages via session state.
+      - You can update in either location; values are included in the Wizard JSON under `initiative`, and a generated `summary_md` is also exported.
 
 ## Requirements
 - Python 3.11+ (per pyproject)

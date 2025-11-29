@@ -95,6 +95,71 @@ def main():
         "Source: https://github.com/Network-Automation-Forum/reference/blob/main/docs/Framework/Framework.md"
     )
 
+    # Apply any queued cross-field updates BEFORE widgets with the same keys are instantiated
+    for _src, _dst in [
+        ("_set_solution_details_md", "solution_details_md"),
+        ("_set_automation_title", "automation_title"),
+        ("_set_automation_description", "automation_description"),
+        ("_set_out_of_scope", "out_of_scope"),
+    ]:
+        if _src in st.session_state:
+            st.session_state[_dst] = st.session_state[_src]
+            del st.session_state[_src]
+
+    # Initiative basics (shared with Business Case page)
+    with st.expander("Initiative basics", expanded=False):
+        st.caption("These fields sync with the Business Case Calculator.")
+        col_ib1, col_ib2 = st.columns([2, 3])
+        with col_ib1:
+            title_default = st.session_state.get(
+                "automation_title", "My new network automation project"
+            )
+            title = st.text_input(
+                "Automation initiative title",
+                value=str(title_default),
+                key="automation_title",
+            )
+        with col_ib2:
+            desc_default = st.session_state.get(
+                "automation_description",
+                "Here is a short description of my my new network automation project",
+            )
+            description = st.text_area(
+                "Short description / scope",
+                value=str(desc_default),
+                height=80,
+                key="automation_description",
+            )
+
+        out_default = st.session_state.get("out_of_scope", "")
+        out_of_scope = st.text_area(
+            "Out of scope (optional)",
+            value=str(out_default),
+            height=80,
+            key="out_of_scope",
+            help="List areas intentionally excluded from this initiative.",
+        )
+
+        details_default = st.session_state.get("solution_details_md", "")
+        details_md = st.text_area(
+            "Detailed solution description (Markdown supported)",
+            value=str(details_default),
+            height=140,
+            key="solution_details_md",
+        )
+
+        # Persist into wizard payload
+        existing_payload = st.session_state.get("solution_wizard", {})
+        st.session_state["solution_wizard"] = {
+            **existing_payload,
+            "initiative": {
+                "title": title,
+                "description": description,
+                "out_of_scope": out_of_scope,
+                "details_md": details_md,
+            },
+        }
+
     # Collapsible guiding questions
     with st.expander("Guiding Questions by Framework Component", expanded=False):
         st.markdown(
@@ -1325,13 +1390,285 @@ def main():
             st.markdown("\n".join(dep_lines))
 
     if not any_content:
-        st.info("Start filling in the sections above to see Solution Highlights here.")
+        st.info("Start filling in the sections above to see Solution Highlights here. Once you provide inputs, you will also be able to download the Wizard JSON.")
+
+    # Markdown summary builder & export — only when there is meaningful content
+    if any_content:
+        # Build a concise markdown summary from current payload
+        def _section_md(title, lines):
+            lines = [l for l in (lines or []) if (l or "").strip()]
+            if not lines:
+                return ""
+            return f"## {title}\n" + "\n".join(lines) + "\n\n"
+
+        summary_parts = []
+        # Initiative
+        ini = payload.get("initiative", {})
+        ini_lines = []
+        if ini.get("title"):
+            ini_lines.append(f"- Title: {ini.get('title')}")
+        if ini.get("description"):
+            ini_lines.append(f"- Scope: {ini.get('description')}")
+        if ini.get("out_of_scope"):
+            ini_lines.append(f"- Out of scope: {ini.get('out_of_scope')}")
+        summary_parts.append(_section_md("Initiative", ini_lines))
+        # Presentation
+        pres = payload.get("presentation", {})
+        pres_lines = []
+        for k in ("users", "interaction", "tools", "auth"):
+            v = pres.get(k)
+            if v and _is_meaningful(v):
+                pres_lines.append(f"- {v}")
+        summary_parts.append(_section_md("Presentation", pres_lines))
+
+        # Intent
+        intent = payload.get("intent", {})
+        intent_lines = []
+        for k in ("development", "provided"):
+            v = intent.get(k)
+            if v and _is_meaningful(v):
+                intent_lines.append(f"- {v}")
+        summary_parts.append(_section_md("Intent", intent_lines))
+
+        # Observability
+        obs = payload.get("observability", {})
+        obs_lines = []
+        for k in ("methods", "go_no_go", "additional_logic", "tools"):
+            v = obs.get(k)
+            if v and _is_meaningful(v):
+                obs_lines.append(f"- {v}")
+        summary_parts.append(_section_md("Observability", obs_lines))
+
+        # Orchestration
+        orch = payload.get("orchestration", {})
+        orch_lines = []
+        v = orch.get("summary")
+        if v and _is_meaningful(v):
+            orch_lines.append(f"- {v}")
+        summary_parts.append(_section_md("Orchestration", orch_lines))
+
+        # Collector
+        collector = payload.get("collector", {})
+        col_lines = []
+        for k in ("methods", "auth", "handling", "normalization", "scale", "tools"):
+            v = collector.get(k)
+            if v and _is_meaningful(v):
+                col_lines.append(f"- {v}")
+        summary_parts.append(_section_md("Collector", col_lines))
+
+        # Executor
+        executor = payload.get("executor", {})
+        exe_lines = []
+        v = executor.get("methods")
+        if v and _is_meaningful(v):
+            exe_lines.append(f"- {v}")
+        summary_parts.append(_section_md("Executor", exe_lines))
+
+        # Dependencies
+        deps = payload.get("dependencies", [])
+        dep_lines = []
+        for d in deps:
+            name = (d or {}).get("name")
+            details = (d or {}).get("details")
+            if name:
+                dep_lines.append(f"- {name}{(': ' + details) if details else ''}")
+        summary_parts.append(_section_md("Dependencies & External Interfaces", dep_lines))
+
+        # Timeline
+        tl = payload.get("timeline", {})
+        tl_lines = []
+        if tl:
+            staff_ct = tl.get("staff_count")
+            start = tl.get("start_date")
+            end = tl.get("projected_completion")
+            total_bd = tl.get("total_business_days")
+            tl_lines.append(
+                f"- Staff {staff_ct if staff_ct is not None else 'TBD'} • Start {start or 'TBD'} • Total {total_bd if total_bd is not None else 'TBD'} bd • Completion {end or 'TBD'}"
+            )
+            for i in (tl.get("items") or [])[:15]:
+                tl_lines.append(
+                    f"  - {i.get('name')}: {i.get('start')} → {i.get('end')} ({i.get('duration_bd')} bd)"
+                )
+        summary_parts.append(_section_md("Staffing, Timeline, & Milestones", tl_lines))
+
+        summary_md = ("".join(summary_parts)).strip()
+        if summary_md:
+            st.markdown("**Wizard Markdown summary**")
+            st.text_area("Summary (copy/paste)", summary_md, height=220, key="_wizard_summary_md_display")
+            col_a, col_b, col_c = st.columns([1, 1, 1])
+            with col_a:
+                if st.button("Send to Business Case 'Detailed solution description'", use_container_width=True):
+                    # Queue updates; they will be applied before widgets render on next run
+                    st.session_state["_set_solution_details_md"] = summary_md
+                    ini_payload = payload.get("initiative", {}) if isinstance(payload, dict) else {}
+                    if ini_payload:
+                        if ini_payload.get("title") is not None:
+                            st.session_state["_set_automation_title"] = ini_payload.get("title")
+                        if ini_payload.get("description") is not None:
+                            st.session_state["_set_automation_description"] = ini_payload.get("description")
+                        if ini_payload.get("out_of_scope") is not None:
+                            st.session_state["_set_out_of_scope"] = ini_payload.get("out_of_scope")
+                    st.success("Queued summary for Business Case. Redirecting…")
+                    st.experimental_rerun()
+            with col_b:
+                st.caption("Tip: You can also copy/paste the summary above.")
+            with col_c:
+                try:
+                    st.page_link(
+                        "pages/01_Business_Case_Calculator.py",
+                        label="Open Business Case Calculator",
+                        icon="🧮",
+                    )
+                except Exception:
+                    pass
+
+        # Persist summary into wizard payload for JSON export
+        payload["summary_md"] = summary_md
+        st.session_state["solution_wizard"] = payload
 
     # Final download (all blocks) — only when there is meaningful content
     if any_content:
         st.markdown("---")
         st.subheader("Export Solution Wizard")
-        final_payload = payload
+        # Build a comprehensive payload including defaults for any missing sections
+        final_payload = dict(payload) if isinstance(payload, dict) else {}
+
+        # Defaults for sections
+        if "presentation" not in final_payload:
+            final_payload["presentation"] = {
+                "users": "",
+                "interaction": "",
+                "tools": "",
+                "auth": "",
+                "selections": {
+                    "users": [],
+                    "interactions": [],
+                    "tools": [],
+                    "auth": [],
+                },
+            }
+
+        if "intent" not in final_payload:
+            final_payload["intent"] = {
+                "development": "",
+                "provided": "",
+                "selections": {
+                    "development": [],
+                    "provided": [],
+                },
+            }
+
+        if "observability" not in final_payload:
+            final_payload["observability"] = {
+                "methods": "",
+                "go_no_go": "",
+                "additional_logic": "",
+                "tools": "",
+                "selections": {
+                    "methods": [],
+                    "go_no_go_text": "",
+                    "additional_logic_enabled": False,
+                    "additional_logic_text": "",
+                    "tools": [],
+                },
+            }
+
+        if "orchestration" not in final_payload:
+            final_payload["orchestration"] = {
+                "summary": "",
+                "selections": {
+                    "choice": "No",
+                    "details": "",
+                },
+            }
+
+        if "executor" not in final_payload:
+            final_payload["executor"] = {
+                "methods": "",
+                "selections": {"methods": []},
+            }
+
+        if "collector" not in final_payload:
+            final_payload["collector"] = {
+                "methods": "",
+                "auth": "",
+                "handling": "",
+                "normalization": "",
+                "scale": "",
+                "tools": "",
+                "selections": {
+                    "methods": [],
+                    "auth": [],
+                    "handling": [],
+                    "normalization": [],
+                    "devices": "",
+                    "metrics_per_sec": "",
+                    "cadence": "",
+                    "tools": [],
+                },
+            }
+
+        if "dependencies" not in final_payload:
+            final_payload["dependencies"] = [
+                {"name": "Network Infrastructure", "details": ""},
+                {"name": "Revision Control system", "details": "GitHub"},
+            ]
+
+        if "timeline" not in final_payload:
+            # Construct a default timeline with computed dates (weekdays only, no holidays)
+            from datetime import timedelta, date
+
+            def _add_bd(d: date, n: int):
+                cur = d
+                days = int(n or 0)
+                while days > 0:
+                    cur = cur + timedelta(days=1)
+                    if cur.weekday() < 5:
+                        days -= 1
+                return cur
+
+            start = datetime.today().date()
+            default_items = [
+                {"name": "Planning", "duration_bd": 5, "notes": ""},
+                {"name": "Design", "duration_bd": 10, "notes": ""},
+                {"name": "Build", "duration_bd": 10, "notes": ""},
+                {"name": "Test", "duration_bd": 5, "notes": ""},
+                {"name": "Pilot", "duration_bd": 5, "notes": ""},
+                {"name": "Production Rollout", "duration_bd": 10, "notes": ""},
+            ]
+            cursor = start
+            schedule = []
+            total_bd = 0
+            for it in default_items:
+                dur = int(it["duration_bd"])
+                s = cursor
+                e = _add_bd(s, dur) if dur > 0 else s
+                schedule.append(
+                    {
+                        "name": it["name"],
+                        "duration_bd": dur,
+                        "start": s.strftime("%Y-%m-%d"),
+                        "end": e.strftime("%Y-%m-%d"),
+                        "notes": it.get("notes", ""),
+                    }
+                )
+                cursor = e
+                total_bd += max(0, dur)
+
+            final_payload["timeline"] = {
+                "start_date": start.strftime("%Y-%m-%d"),
+                "total_business_days": total_bd,
+                "projected_completion": cursor.strftime("%Y-%m-%d"),
+                "staff_count": 1,
+                "staffing_plan_md": "",
+                "holiday_region": "None",
+                "items": schedule,
+            }
+
+        # Ensure summary_md is included
+        if "summary_md" not in final_payload:
+            final_payload["summary_md"] = summary_md if summary_md else ""
+
         final_json_bytes = json.dumps(final_payload, indent=2).encode("utf-8")
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.download_button(
