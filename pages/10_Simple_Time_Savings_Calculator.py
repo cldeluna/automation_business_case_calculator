@@ -32,7 +32,7 @@ from datetime import datetime
 def main():
 
     st.set_page_config(
-        page_title="Simple Time Savings Calculator",
+        page_title="Simple Time Savings Calculator/Estimator",
         page_icon="images/EIA_Favicon.png",
         layout="wide",
     )
