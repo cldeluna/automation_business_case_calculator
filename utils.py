@@ -67,6 +67,18 @@ def thick_hr(color: str = "red", thickness: int = 3, margin: str = "1rem 0"):
     )
 
 
+def hr_colors():
+    """
+    Returns a dictionary of colors for horizontal lines.
+    """
+    hr_color_dict = {
+        "naf_yellow": "#fffe03",
+        "eia_blue": "#92c0e4",
+        "eia_dkblue": "#122e43",
+    }
+    return hr_color_dict
+
+
 # ---------- Visualization helpers (Plotly) ----------
 
 
