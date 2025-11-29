@@ -66,6 +66,8 @@ def main():
             - Provide engineer fully-loaded cost per hour.
             
             An interaction can be a change, submission, calculation, analysis, troubleshooting, or other task that requires network device interaction and execution (logging in, determing state, executing commands, verifying results, etc.).
+            
+            Note: This simple calculator uses a fixed one-year horizon for costs and ROI calculations.
             """
         )
 
@@ -399,11 +401,13 @@ def main():
                 "Note: If your browser is configured to ask for a download location, it was saved wherever you chose."
             )
 
-        utils.thick_hr(color="grey", thickness=5)
+
     else:
         st.info(
             "Update the title, description, time inputs, and assumptions to see results and a summary narrative."
         )
+
+    utils.thick_hr(color="grey", thickness=5)
     st.caption(
         "Tip: Use the Business Case Calculator for full NPV/IRR/payback modeling."
     )
