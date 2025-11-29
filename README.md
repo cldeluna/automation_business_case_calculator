@@ -50,8 +50,15 @@ Contact: <claudia@eianow.com> • https://eianow.com
 
 - 🧭 `Solution Wizard` (`pages/03_Solution_Wizard.py`)
   - Guides you through NAF Framework components (Presentation, Intent, Observability, Orchestration, Collector, Executor).
-  - Optional; use it to validate your plan and generate descriptive narrative.
-  - Source: https://github.com/Network-Automation-Forum/reference/tree/main/docs/Framework
+  - Optional: You can skip the wizard if you already have solid inputs for the calculator.
+    - Collector includes a "Collection tools" selector (e.g., SuzieQ, Cisco Catalyst Center, Cisco Nexus Dashboard, Cisco ACI APIC, Arista CVP, Prometheus).
+    - Staffing, Timeline, & Milestones:
+      - Direct staff count and a markdown-supported staffing plan.
+      - Start date and business-day scheduling (Mon–Fri, optional public holidays via python-holidays).
+      - Plotly Gantt toggle for a visual timeline.
+      - Summary callouts: expected delivery date and approximate duration in months/years.
+    - Solution Highlights suppress default/empty content (e.g., default timeline and default dependencies are hidden until you edit).
+    - Source: https://github.com/Network-Automation-Forum/reference/tree/main/docs/Framework
 
 ## Requirements
 - Python 3.11+ (per pyproject)

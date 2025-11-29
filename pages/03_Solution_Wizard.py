@@ -15,18 +15,45 @@ import streamlit as st
 import json
 from datetime import datetime
 import utils
+from wizard_utils import join_human, md_line, is_meaningful
+import pandas as pd
+import plotly.express as px
+
+# Optional lightweight holiday support
+try:
+    import holidays as _hol
+except Exception:  # pragma: no cover
+    _hol = None
 
 
 def _join(items):
-    items = [i for i in items if i]
-    if not items:
-        return "TBD"
-    if len(items) == 1:
-        return items[0]
-    return ", ".join(items[:-1]) + f" and {items[-1]}"
+    # Delegate to shared tested helper
+    return join_human(items)
 
 
 def main():
+    """
+    Solution Wizard (NAF Framework) interactive page
+
+    Includes guided inputs for:
+    - Presentation, Intent, Observability, Orchestration, Collector, and Executor
+    - Collector now includes a dedicated "Collection tools" selector (e.g., SuzieQ, Catalyst Center, Nexus Dashboard, ACI APIC, Arista CVP, Prometheus)
+
+    Planning section:
+    - "Staffing, Timeline, & Milestones" with:
+      - Staffing fields (direct staff count and markdown-supported staffing plan)
+      - Start date calendar
+      - Editable milestone rows (name, duration in business days, notes)
+      - Business-day scheduling that skips weekends and optionally public holidays (via python-holidays)
+      - Optional Plotly Gantt chart visualization
+      - Summary callouts for expected delivery date (st.success) and approximate duration in months/years (st.info)
+
+    Highlights & export:
+    - Solution Highlights suppress default/empty content (e.g., default timeline and default dependencies are hidden)
+    - Exports consolidated payload to JSON in st.session_state["solution_wizard"], including:
+      - presentation/intent/observability/orchestration/collector/executor narratives and selections
+      - timeline: start_date, total_business_days, projected_completion, staff_count, staffing_plan_md, holiday_region, and detailed items
+    """
     # Page config
     st.set_page_config(
         page_title="Solution Wizard",
@@ -260,7 +287,7 @@ def main():
 
         st.markdown(
             """
-            ### Intent or the abstracted version of what you are trying to do
+            Intent or the abstracted version of what you are trying to do
             - Represents any network aspect in a structured form (addressing, DC infrastructure, routing, virtual services, secrets, operational limits, templates/mappings, policies, artifacts).
             - Supports full CRUD operations and exposes a standard, well-documented API (e.g., REST, GraphQL).
             - Uses neutral models that derive into vendor-specific configurations.
@@ -426,20 +453,19 @@ def main():
         obs_tools_other = ""
         if obs_tools_other_enabled:
             obs_tools_other = st.text_input(
-                "Other observability tool(s)", key="obs_tool_other"
+                "Other observability tool(s)", key="obs_tool_other_text"
             )
 
-        # Narrative synthesis
+        # Compile selected observability tools before narrative
+        selected_tools_obs = [k for k, v in obs_tools_checks.items() if v]
+        if obs_tools_other_enabled and (obs_tools_other or "").strip():
+            selected_tools_obs.append(obs_tools_other.strip())
 
+        # Build method and go/no-go narratives
         selected_methods = [k for k, v in state_methods_checks.items() if v]
-        selected_tools = [k for k, v in obs_tools_checks.items() if v]
-        if obs_tools_other_enabled and obs_tools_other.strip():
-            selected_tools.append(obs_tools_other.strip())
+        methods_sentence = f"Network state will be determined via {_join(selected_methods)}."
+        go_no_go_sentence = f"Go/No-Go criteria: {(go_no_go_text or '').strip() or 'TBD'}."
 
-        methods_sentence = (
-            f"Network state will be determined via {_join(selected_methods)}."
-        )
-        go_no_go_sentence = f"Go/No-Go logic: {go_no_go_text.strip() or 'TBD'}."
         if add_logic_choice == "Yes":
             additional_logic_sentence = f"Additional gating logic will be applied: {add_logic_text.strip() or 'TBD'}."
         else:
@@ -447,7 +473,7 @@ def main():
                 "No additional gating logic beyond the defined go/no-go criteria."
             )
         tools_sentence_obs = (
-            f"Observability will be supported by {_join(selected_tools)}."
+            f"Observability will be supported by {_join(selected_tools_obs)}."
         )
 
         utils.thick_hr(color="#6785a0", thickness=3)
@@ -471,7 +497,7 @@ def main():
                     "go_no_go_text": go_no_go_text,
                     "additional_logic_enabled": add_logic_choice == "Yes",
                     "additional_logic_text": add_logic_text,
-                    "tools": selected_tools,
+                    "tools": selected_tools_obs,
                 },
             },
         }
@@ -481,7 +507,7 @@ def main():
 
     # Orchestration section
     with st.expander("Orchestration", expanded=False):
-        st.subheader("Will the solution utilize orchestration?")
+
         st.markdown(
             """
             Orchestration coordinates processes across framework components to create end-to-end workflows.
@@ -495,9 +521,11 @@ def main():
             """
         )
 
+        st.subheader("Will the solution utilize orchestration?")
+
         orch_choice = st.radio(
             "Select an option",
-            ["No", "Yes – internal via custom scripts", "Yes – provide details"],
+            ["No", "Yes – internal via custom scripts and logic", "Yes – provide details"],
             key="orch_choice",
             horizontal=False,
         )
@@ -542,6 +570,14 @@ def main():
 
     # Collector section
     with st.expander("Collector", expanded=False):
+        st.markdown(
+            """
+            The collection layer focuses on retrieving the actual state of the network over time and ideally presenting it in a normalized format.
+            - The collector can be thought of as a "read only" version of the executor.
+            - It includes capabilities for retrieving live data from the network using read interfaces.
+            - Retrieved data should be normalized across vendors and collection methods in a time series format.
+            """
+        )
         st.subheader("Collection methods (protocols/APIs)")
         cols_c1 = st.columns(3)
         collect_method_opts = [
@@ -593,6 +629,30 @@ def main():
             with cols_c4[i % 3]:
                 norm_checks[opt] = st.checkbox(opt, key=f"collector_norm_{opt}")
 
+        # Collection tools (moved here from separate section)
+        st.subheader("Collection tools")
+        cols_ct = st.columns(3)
+        tool_opts = [
+            "SuzieQ",
+            "Cisco Catalyst Center",
+            "Cisco Nexus Dashboard",
+            "Cisco ACI APIC",
+            "Arista CVP",
+            "Prometheus",
+        ]
+        tool_checks = {}
+        for i, opt in enumerate(tool_opts):
+            with cols_ct[i % 3]:
+                tool_checks[opt] = st.checkbox(opt, key=f"collection_tool_{opt}")
+        tools_other_enable = st.checkbox(
+            "Other (fill in)", key="collection_tools_other_enable"
+        )
+        tools_other_text = ""
+        if tools_other_enable:
+            tools_other_text = st.text_input(
+                "Other collection tool(s)", key="collection_tools_other"
+            )
+
         st.subheader("Expected scale")
         col_s1, col_s2, col_s3 = st.columns(3)
         with col_s1:
@@ -614,12 +674,16 @@ def main():
         selected_auth = [k for k, v in auth_checks.items() if v]
         selected_handling = [k for k, v in handling_checks.items() if v]
         selected_norm = [k for k, v in norm_checks.items() if v]
+        selected_tools = [k for k, v in tool_checks.items() if v]
+        if tools_other_enable and (tools_other_text or "").strip():
+            selected_tools.append(tools_other_text.strip())
 
         methods_sentence = f"Collection will use {_join(selected_methods)}."
         auth_sentence = f"Authentication will leverage {_join(selected_auth)}."
         handling_sentence = f"Traffic handling will include {_join(selected_handling)}."
         norm_sentence = f"Collected data will be normalized via {_join(selected_norm)}."
         scale_sentence = f"Expected scale: ~{devices or 'TBD'} devices, ~{metrics or 'TBD'} metrics/sec, cadence {cadence or 'TBD'}."
+        tools_sentence_coll = f"Collection tools will include {_join(selected_tools)}."
 
         utils.thick_hr(color="#6785a0", thickness=3)
         st.markdown("**Preview Solution Highlights**")
@@ -628,6 +692,7 @@ def main():
         st.write(handling_sentence)
         st.write(norm_sentence)
         st.write(scale_sentence)
+        st.write(tools_sentence_coll)
 
         existing = st.session_state.get("solution_wizard", {})
         merged_col = {
@@ -638,6 +703,7 @@ def main():
                 "handling": handling_sentence,
                 "normalization": norm_sentence,
                 "scale": scale_sentence,
+                "tools": tools_sentence_coll,
                 "selections": {
                     "methods": selected_methods,
                     "auth": selected_auth,
@@ -646,15 +712,17 @@ def main():
                     "devices": devices,
                     "metrics_per_sec": metrics,
                     "cadence": cadence,
+                    "tools": selected_tools,
                 },
             },
         }
         st.session_state["solution_wizard"] = merged_col
 
-    # Executor section (moved after Collector)
+    # Executor section
     with st.expander("Executor", expanded=False):
         st.markdown(
             """
+            The executor executes the actual changes to the network.
             - It MUST be capable of interacting with any supported network write interfaces (e.g., SSH/CLI, NETCONF, gNMI/gNOI, REST APIs).
             - It SHOULD support operations that alter network state, from deploying full/partial configs to device actions (reboots, upgrades).
             - Task input SHOULD originate from the intended state or be derived via data from Observability.
@@ -705,6 +773,12 @@ def main():
             },
         }
         st.session_state["solution_wizard"] = merged_exec
+
+    # Transition to external interfaces and planning
+    utils.thick_hr(color="grey", thickness=5)
+    st.markdown(
+        "While the framework helps you think about the technical implementation, for a complete project let's now consider external interfaces, staffing, and timelines."
+    )
 
     # Dependencies & External Interfaces (shared across pages)
     with st.expander("Dependencies & External Interfaces", expanded=False):
@@ -824,25 +898,268 @@ def main():
         }
         st.session_state["solution_wizard"] = merged_deps
 
+    # Staffing, Timeline, & Milestones
+    with st.expander("Staffing, Timeline, & Milestones", expanded=False):
+        st.caption(
+            "Capture a high-level plan with durations in business days. Start date drives scheduled dates."
+        )
+        st.info(
+            "Duration should reflect expected staffing. For example, if a step is 10 business days of work but two people will work in parallel, you may model it as 5–6 days to allow for coordination overhead."
+        )
+
+        st.subheader("Staffing plan")
+        st.caption("Provide expected direct staffing and a short plan. Markdown is supported.")
+        col_sp1, col_sp2 = st.columns([1, 3])
+        with col_sp1:
+            staff_count = st.number_input(
+                "Direct staff on project",
+                min_value=0,
+                value=int(st.session_state.get("timeline_staff_count", 1)),
+                step=1,
+                key="_timeline_staff_count",
+            )
+            st.session_state["timeline_staff_count"] = int(staff_count)
+        with col_sp2:
+            staffing_plan = st.text_area(
+                "Staffing plan (markdown supported)",
+                value=str(st.session_state.get("timeline_staffing_plan", "")),
+                height=120,
+                key="_timeline_staffing_plan",
+            )
+            st.session_state["timeline_staffing_plan"] = staffing_plan
+
+        # Holiday calendar selector (lightweight)
+        region_options = [
+            "None",
+            "United States",
+            "Canada",
+            "United Kingdom",
+            "Germany",
+            "India",
+            "Australia",
+        ]
+        holiday_region = st.selectbox(
+            "Holiday calendar",
+            options=region_options,
+            index=region_options.index(
+                st.session_state.get("timeline_holiday_region", "None")
+                if st.session_state.get("timeline_holiday_region", "None") in region_options
+                else "None"
+            ),
+            help="Used to skip public holidays when computing business days.",
+            key="_timeline_holiday_region",
+        )
+        st.session_state["timeline_holiday_region"] = holiday_region
+
+        def _build_holiday_set(start_year: int, years_ahead: int = 2):
+            if _hol is None or holiday_region == "None":
+                return set()
+            years = list(range(start_year, start_year + max(1, years_ahead) + 1))
+            cal = None
+            try:
+                if holiday_region == "United States":
+                    cal = _hol.UnitedStates(years=years)
+                elif holiday_region == "Canada":
+                    cal = _hol.Canada(years=years)
+                elif holiday_region == "United Kingdom":
+                    cal = _hol.UnitedKingdom(years=years)
+                elif holiday_region == "Germany":
+                    cal = _hol.Germany(years=years)
+                elif holiday_region == "India":
+                    cal = _hol.India(years=years)
+                elif holiday_region == "Australia":
+                    cal = _hol.Australia(years=years)
+            except Exception:
+                cal = None
+            return set(cal.keys()) if cal else set()
+
+        # Helper: add business days (Mon–Fri), with optional holidays
+        def _add_business_days(d, n, holiday_set=None):
+            from datetime import timedelta
+
+            days = int(n or 0)
+            cur = d
+            while days > 0:
+                cur = cur + timedelta(days=1)
+                if cur.weekday() < 5 and (holiday_set is None or cur not in holiday_set):  # Mon=0 .. Sun=6
+                    days -= 1
+            return cur
+
+        # Start date
+        default_start = st.session_state.get("timeline_start_date")
+        start_date = st.date_input(
+            "Project start date",
+            value=default_start or datetime.today().date(),
+            key="_timeline_start_date_input",
+        )
+        st.session_state["timeline_start_date"] = start_date
+
+        # Milestones state
+        if "timeline_milestones" not in st.session_state:
+            st.session_state["timeline_milestones"] = [
+                {"name": "Planning", "duration": 5, "notes": ""},
+                {"name": "Design", "duration": 10, "notes": ""},
+                {"name": "Build", "duration": 10, "notes": ""},
+                {"name": "Test", "duration": 5, "notes": ""},
+                {"name": "Pilot", "duration": 5, "notes": ""},
+                {"name": "Production Rollout", "duration": 10, "notes": ""},
+            ]
+
+        # Controls
+        c_a, c_b = st.columns([1, 1])
+        with c_a:
+            if st.button("Add milestone row", key="_timeline_add_row"):
+                st.session_state["timeline_milestones"].append(
+                    {"name": "", "duration": 0, "notes": ""}
+                )
+        with c_b:
+            st.caption("Use the fields below to edit milestone name, duration (business days), and notes.")
+
+        # Render rows
+        to_delete = []
+        for idx, row in enumerate(list(st.session_state["timeline_milestones"])):
+            rcols = st.columns([3, 2, 5, 1])
+            with rcols[0]:
+                row_name = st.text_input(
+                    "Milestone",
+                    value=str(row.get("name", "")),
+                    key=f"_tl_name_{idx}",
+                )
+            with rcols[1]:
+                row_duration = st.number_input(
+                    "Duration (business days)",
+                    min_value=0,
+                    value=int(row.get("duration", 0)),
+                    step=1,
+                    key=f"_tl_duration_{idx}",
+                )
+            with rcols[2]:
+                row_notes = st.text_input(
+                    "Notes/comments",
+                    value=str(row.get("notes", "")),
+                    key=f"_tl_notes_{idx}",
+                )
+            with rcols[3]:
+                del_flag = st.checkbox("Delete", key=f"_tl_del_{idx}")
+                if del_flag:
+                    to_delete.append(idx)
+
+            # Persist edits back to state
+            st.session_state["timeline_milestones"][idx] = {
+                "name": row_name,
+                "duration": int(row_duration),
+                "notes": row_notes,
+            }
+
+        # Apply deletions (from end to start)
+        for i in sorted(to_delete, reverse=True):
+            if 0 <= i < len(st.session_state["timeline_milestones"]):
+                st.session_state["timeline_milestones"].pop(i)
+
+        # Build schedule
+        schedule = []
+        cursor = start_date
+        holiday_set = _build_holiday_set(start_date.year, years_ahead=3)
+        total_bd = 0
+        for row in st.session_state["timeline_milestones"]:
+            name = (row.get("name") or "").strip()
+            dur = int(row.get("duration") or 0)
+            notes = row.get("notes") or ""
+            if not name and dur <= 0:
+                continue
+            start = cursor
+            end = _add_business_days(start, dur, holiday_set) if dur > 0 else start
+            schedule.append(
+                {
+                    "name": name or "(Unnamed)",
+                    "duration_bd": dur,
+                    "start": start,
+                    "end": end,
+                    "notes": notes,
+                }
+            )
+            cursor = end  # next starts after this completes
+            total_bd += max(0, dur)
+
+        # Summary & display
+        if schedule:
+            st.markdown("**Timeline summary (business days only)**")
+            st.write(
+                f"Start: {start_date.strftime('%Y-%m-%d')} • Total duration: {total_bd} business days • Projected completion: {schedule[-1]['end'].strftime('%Y-%m-%d')}"
+            )
+            # Success/info callouts
+            st.success(f"Expected delivery date: {schedule[-1]['end'].strftime('%Y-%m-%d')}")
+            months_est = total_bd / 21.75 if total_bd else 0.0  # approx working days per month
+            years_est = months_est / 12.0 if months_est else 0.0
+            st.info(
+                f"Approximate duration: {months_est:.1f} months ({years_est:.2f} years) based on business days"
+            )
+
+            st.markdown("**Milestones schedule**")
+            for item in schedule:
+                st.write(
+                    f"- {item['name']}: {item['start'].strftime('%Y-%m-%d')} → {item['end'].strftime('%Y-%m-%d')} ({item['duration_bd']} bd)"
+                )
+
+            # Optional: Visual timeline
+            show_chart = st.checkbox("Show Gantt chart", value=True, key="_timeline_show_chart")
+            if show_chart:
+                df = pd.DataFrame(
+                    [
+                        {
+                            "Task": it["name"],
+                            "Start": it["start"],
+                            "Finish": it["end"],
+                            "Duration (bd)": it["duration_bd"],
+                        }
+                        for it in schedule
+                    ]
+                )
+                if not df.empty:
+                    fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Task")
+                    fig.update_yaxes(autorange="reversed")  # earliest at top
+                    fig.update_layout(height=380, margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Add at least one milestone to build a timeline.")
+
+        # Persist into wizard payload
+        existing = st.session_state.get("solution_wizard", {})
+        merged_tl = {
+            **existing,
+            "timeline": {
+                "start_date": start_date.strftime("%Y-%m-%d"),
+                "total_business_days": total_bd,
+                "projected_completion": schedule[-1]["end"].strftime("%Y-%m-%d") if schedule else None,
+                "staff_count": int(st.session_state.get("timeline_staff_count", 0)),
+                "staffing_plan_md": st.session_state.get("timeline_staffing_plan", ""),
+                "holiday_region": holiday_region,
+                "items": [
+                    {
+                        "name": i["name"],
+                        "duration_bd": i["duration_bd"],
+                        "start": i["start"].strftime("%Y-%m-%d"),
+                        "end": i["end"].strftime("%Y-%m-%d"),
+                        "notes": i["notes"],
+                    }
+                    for i in schedule
+                ],
+            },
+        }
+        st.session_state["solution_wizard"] = merged_tl
+
     # Live narrative preview
     utils.thick_hr(color="grey", thickness=5)
     st.subheader("Solution Highlights")
     payload = st.session_state.get("solution_wizard", {})
 
     def _md_line(text: str) -> str:
-        return f"- {text}" if text else ""
+        # Delegate to shared tested helper
+        return md_line(text)
 
     def _is_meaningful(text: str) -> bool:
-        if not text:
-            return False
-        t = text.strip().lower()
-        if "tbd" in t:
-            return False
-        default_placeholders = {
-            "no additional gating logic beyond the defined go/no-go criteria.",
-            "this solution will not employ a distinct orchestration layer.",
-        }
-        return t not in default_placeholders
+        # Delegate to shared tested helper
+        return is_meaningful(text)
 
     any_content = False
 
@@ -930,27 +1247,85 @@ def main():
             st.markdown("**Collector**")
             st.markdown("\n".join(sec_lines))
 
-    # Dependencies block in highlights
+    # Staffing, Timeline block in highlights
+    timeline = payload.get("timeline")
+    if timeline:
+        # Determine if timeline appears to be default/unmodified
+        default_items = [
+            {"name": "Planning", "duration_bd": 5},
+            {"name": "Design", "duration_bd": 10},
+            {"name": "Build", "duration_bd": 10},
+            {"name": "Test", "duration_bd": 5},
+            {"name": "Pilot", "duration_bd": 5},
+            {"name": "Production Rollout", "duration_bd": 10},
+        ]
+        items_slim = [
+            {"name": (i or {}).get("name"), "duration_bd": (i or {}).get("duration_bd")}
+            for i in (timeline.get("items") or [])
+        ]
+        looks_default_items = items_slim == default_items
+        staff_ct = timeline.get("staff_count")
+        plan_md = (timeline.get("staffing_plan_md") or "").strip()
+        looks_default_staff = (staff_ct == 1) and (plan_md == "")
+
+        is_default_timeline = looks_default_items and looks_default_staff
+
+        lines = []
+        start = timeline.get("start_date")
+        total_bd = timeline.get("total_business_days")
+        end = timeline.get("projected_completion")
+        header = f"Staff {staff_ct if staff_ct is not None else 'TBD'} • Start {start or 'TBD'} • Total {total_bd if total_bd is not None else 'TBD'} bd • Completion {end or 'TBD'}"
+        if not is_default_timeline:
+            lines.append(_md_line(header))
+            if plan_md:
+                lines.append(_md_line("Staffing plan:"))
+                # indent the plan to render as a sub-bullet
+                for pl in plan_md.splitlines()[:8]:  # cap lines for brevity
+                    lines.append(f"  - {pl}")
+            for i in (timeline.get("items") or [])[:15]:  # cap to 15 for display brevity
+                lines.append(
+                    _md_line(
+                        f"{i.get('name')}: {i.get('start')} → {i.get('end')} ({i.get('duration_bd')} bd)"
+                    )
+                )
+            if lines:
+                any_content = True
+                st.markdown("**Staffing, Timeline, & Milestones**")
+                st.markdown("\n".join(lines))
+
+    # Dependencies block in highlights (suppress if still defaults)
     deps = payload.get("dependencies", [])
     if deps:
+        # Build slim list for default detection
+        deps_slim = [
+            {"name": (d or {}).get("name"), "details": (d or {}).get("details", "").strip()}
+            for d in deps
+            if (d or {}).get("name")
+        ]
+        # Default selections present at first render
+        default_deps = [
+            {"name": "Network Infrastructure", "details": ""},
+            {"name": "Revision Control system", "details": "GitHub"},
+        ]
+        def _sorted(items):
+            return sorted(items, key=lambda x: (x.get("name") or "", x.get("details") or ""))
+        looks_default_deps = _sorted(deps_slim) == _sorted(default_deps)
+
         dep_lines = []
-        for d in deps:
-            name = (d or {}).get("name")
-            details = (d or {}).get("details")
-            if name:
-                if details:
-                    dep_lines.append(_md_line(f"{name}: {details}"))
-                else:
-                    dep_lines.append(_md_line(f"{name}"))
+        if not looks_default_deps:
+            for d in deps_slim:
+                nm = d.get("name")
+                dt = d.get("details")
+                if nm:
+                    dep_lines.append(_md_line(f"{nm}: {dt}" if dt else f"{nm}"))
+
         if dep_lines:
             any_content = True
             st.markdown("**Dependencies & External Interfaces**")
             st.markdown("\n".join(dep_lines))
 
     if not any_content:
-        st.info(
-            "Work through the Automation Framework functions/layers to see highlights here."
-        )
+        st.info("Start filling in the sections above to see Solution Highlights here.")
 
     # Final download (all blocks) — only when there is meaningful content
     if any_content:
