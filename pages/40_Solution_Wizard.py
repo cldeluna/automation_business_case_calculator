@@ -652,6 +652,7 @@ def main():
             """
         )
         st.subheader("Collection methods (protocols/APIs)")
+        st.caption("Build your own approaches (protocols, handling, normalization)")
         cols_c1 = st.columns(3)
         collect_method_opts = [
             "SNMP",
@@ -667,6 +668,14 @@ def main():
         for i, opt in enumerate(collect_method_opts):
             with cols_c1[i % 3]:
                 collect_checks[opt] = st.checkbox(opt, key=f"collector_method_{opt}")
+        methods_other_enable = st.checkbox(
+            "Other (fill in)", key="collector_methods_other_enable"
+        )
+        methods_other_text = ""
+        if methods_other_enable:
+            methods_other_text = st.text_input(
+                "Other protocol/API", key="collector_methods_other"
+            )
 
         st.subheader("Authentication")
         cols_c2 = st.columns(3)
@@ -675,10 +684,19 @@ def main():
         for i, opt in enumerate(auth_opts):
             with cols_c2[i % 3]:
                 auth_checks[opt] = st.checkbox(opt, key=f"collector_auth_{opt}")
+        auth_other_enable = st.checkbox(
+            "Other (fill in)", key="collector_auth_other_enable"
+        )
+        auth_other_text = ""
+        if auth_other_enable:
+            auth_other_text = st.text_input(
+                "Other authentication method(s)", key="collector_auth_other"
+            )
 
         st.subheader("Traffic handling")
         cols_c3 = st.columns(3)
         handling_opts = [
+            "None",
             "Rate limiting",
             "Retries",
             "Exponential backoff",
@@ -688,10 +706,19 @@ def main():
         for i, opt in enumerate(handling_opts):
             with cols_c3[i % 3]:
                 handling_checks[opt] = st.checkbox(opt, key=f"collector_handle_{opt}")
+        handling_other_enable = st.checkbox(
+            "Other (fill in)", key="collector_handling_other_enable"
+        )
+        handling_other_text = ""
+        if handling_other_enable:
+            handling_other_text = st.text_input(
+                "Other traffic handling approach(es)", key="collector_handling_other"
+            )
 
         st.subheader("Normalization and schemas")
         cols_c4 = st.columns(3)
         norm_opts = [
+            "None",
             "Timestamping",
             "Tagging/labels",
             "Topology enrichment",
@@ -701,11 +728,27 @@ def main():
         for i, opt in enumerate(norm_opts):
             with cols_c4[i % 3]:
                 norm_checks[opt] = st.checkbox(opt, key=f"collector_norm_{opt}")
+        norm_other_enable = st.checkbox(
+            "Other (fill in)", key="collector_norm_other_enable"
+        )
+        norm_other_text = ""
+        if norm_other_enable:
+            norm_other_text = st.text_input(
+                "Other normalization/schema approach(es)", key="collector_norm_other"
+            )
+
+        # Visual divider indicating build vs buy/use existing
+        st.divider()
+        _or_c1, _or_c2, _or_c3 = st.columns([1, 1, 1])
+        with _or_c2:
+            st.markdown("**OR**")
 
         # Collection tools (moved here from separate section)
         st.subheader("Collection tools")
+        st.caption("Buy/use existing platforms (collection tools)")
         cols_ct = st.columns(3)
         tool_opts = [
+            "None",
             "SuzieQ",
             "Cisco Catalyst Center",
             "Cisco Nexus Dashboard",
@@ -734,7 +777,14 @@ def main():
             )
         with col_s2:
             metrics = st.text_input(
-                "Metrics/sec (approx)", key="collector_metrics", placeholder="e.g., 50k"
+                "Metrics/sec (approx)",
+                key="collector_metrics",
+                placeholder="e.g., 50k",
+                help=(
+                    "Approximate number of time-series datapoints ingested per second across all devices/feeds. "
+                    "Examples: interface counters, CPU/memory samples, route counts, flow records, or parsed log lines. "
+                    "This is not the number of API calls; it is the count of individual metrics collected per second (e.g., 50k = 50,000/sec)."
+                ),
             )
         with col_s3:
             cadence = st.text_input(
@@ -744,9 +794,17 @@ def main():
             )
 
         selected_methods = [k for k, v in collect_checks.items() if v]
+        if methods_other_enable and (methods_other_text or "").strip():
+            selected_methods.append(methods_other_text.strip())
         selected_auth = [k for k, v in auth_checks.items() if v]
+        if auth_other_enable and (auth_other_text or "").strip():
+            selected_auth.append(auth_other_text.strip())
         selected_handling = [k for k, v in handling_checks.items() if v]
+        if handling_other_enable and (handling_other_text or "").strip():
+            selected_handling.append(handling_other_text.strip())
         selected_norm = [k for k, v in norm_checks.items() if v]
+        if norm_other_enable and (norm_other_text or "").strip():
+            selected_norm.append(norm_other_text.strip())
         selected_tools = [k for k, v in tool_checks.items() if v]
         if tools_other_enable and (tools_other_text or "").strip():
             selected_tools.append(tools_other_text.strip())
@@ -1208,6 +1266,20 @@ def main():
                     fig.update_yaxes(autorange="reversed")  # earliest at top
                     fig.update_layout(height=380, margin=dict(l=0, r=0, t=30, b=0))
                     st.plotly_chart(fig, use_container_width=True)
+
+                    # Offer download of the Gantt chart as a standalone HTML file
+                    gantt_html = fig.to_html(full_html=True, include_plotlyjs="cdn")
+                    gantt_fname = f"WizardTimeline_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}Z.html"
+                    dl_clicked = st.download_button(
+                        label="Download Gantt chart (HTML)",
+                        data=gantt_html,
+                        file_name=gantt_fname,
+                        mime="text/html",
+                        use_container_width=True,
+                        key="wizard_timeline_download_btn",
+                    )
+                    if dl_clicked:
+                        st.session_state["wizard_timeline_last_filename"] = gantt_fname
         else:
             st.info("Add at least one milestone to build a timeline.")
 
@@ -1547,9 +1619,7 @@ def main():
                     # Queue updates; they will be applied before widgets render on next run
                     st.session_state["_set_solution_details_md"] = summary_md
                     ini_payload = (
-                        payload.get("initiative", {})
-                        if isinstance(payload, dict)
-                        else {}
+                        payload.get("initiative", {}) if isinstance(payload, dict) else {}
                     )
                     if ini_payload:
                         if ini_payload.get("title") is not None:
@@ -1557,15 +1627,15 @@ def main():
                                 "title"
                             )
                         if ini_payload.get("description") is not None:
-                            st.session_state["_set_automation_description"] = (
-                                ini_payload.get("description")
+                            st.session_state["_set_automation_description"] = ini_payload.get(
+                                "description"
                             )
                         if ini_payload.get("out_of_scope") is not None:
                             st.session_state["_set_out_of_scope"] = ini_payload.get(
                                 "out_of_scope"
                             )
                     st.success("Queued summary for Business Case. Redirecting…")
-                    st.experimental_rerun()
+                    st.rerun()
             with col_b:
                 st.caption("Tip: You can also copy/paste the summary above.")
             with col_c:
@@ -1578,11 +1648,6 @@ def main():
                 except Exception:
                     pass
 
-        # Persist summary into wizard payload for JSON export
-        payload["summary_md"] = summary_md
-        st.session_state["solution_wizard"] = payload
-
-    # Final download (all blocks) — only when there is meaningful content
     if any_content:
         st.markdown("---")
         st.subheader("Export Solution Wizard")
