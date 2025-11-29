@@ -41,8 +41,12 @@ Contact: <claudia@eianow.com> • https://eianow.com
 
 ## App Pages
 - ⏱️ `Simple Time Savings Calculator` (`pages/10_Simple_Time_Savings_Calculator.py`)
-  - Quick estimator for annual hours and cost savings from automation.
-  - Enter manual vs automated minutes, volume per month, automation coverage, and hourly rate.
+  - Quick estimator for annual hours and cost savings from automating an interaction.
+  - Sidebar inputs: interactions/month, automation coverage %, hourly rate, implement hours (one-time), maintain hours/year.
+  - Collapsed expander for detailed per-step minutes (manual vs automated) with totals shown above.
+  - Results table with minutes saved/interaction, volumes, annual hours and cost savings, one-year project cost, and a quick ROI.
+  - Summary Narrative rendered as plain text with scenario-specific values.
+  - Save results as a timestamped JSON (`SimpleROI_<shortTitle>_<YYYYMMDD_HHMMZ>.json`) and load a saved JSON to restore a scenario.
 
 - 🧮 `Business Case Calculator` (`pages/20_Business_Case_Calculator.py`)
   - Interactive inputs and instant calculations.

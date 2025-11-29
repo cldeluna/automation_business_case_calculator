@@ -39,6 +39,7 @@ def main():
     This app helps you build a defensible business case for Network Automation, quantify costs and benefits, and generate a CXO-ready Markdown report. It also includes a Solution Wizard to describe your automation approach aligned to the NAF Automation Framework.
     
     ### What you can do here
+    - **Simple Time Savings Calculator**: Quickly estimate annual hours and cost savings from automating an interaction, see a results table and a plain-text narrative, compute a one-year quick ROI, and save/load a Simple ROI JSON.
     - **Business Case Calculator**: Enter your volumes, time savings, Buy vs Build costs, and (optional) Debts & Risk (Technical Debt and CSAT Debt). The app computes NPV, IRR, Payback, and generates a Markdown report. You can download a ZIP with the report and a timestamped JSON scenario.
     - **Business Case Comparison**: Upload two saved JSON scenarios (e.g., Buy vs Build) and compare key metrics side-by-side with deltas.
     - **Solution Wizard**: Describe an automation solution aligned to the Network Automation Forum (NAF) Automation Framework. Capture choices for Presentation, Intent, Observability, Orchestration, Collector, and Executor, and preview a clear narrative per section.
@@ -54,6 +55,11 @@ def main():
     )
 
     # Streamlit's page links (visible when running as a multipage app with a /pages directory)
+    st.page_link(
+        "pages/10_Simple_Time_Savings_Calculator.py",
+        label=" Open Simple Time Savings Calculator",
+        icon="⏱️",
+    )
     st.page_link(
         "pages/20_Business_Case_Calculator.py",
         label=" Open Business Case Calculator",

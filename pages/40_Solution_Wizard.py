@@ -528,8 +528,12 @@ def main():
 
         # Build method and go/no-go narratives
         selected_methods = [k for k, v in state_methods_checks.items() if v]
-        methods_sentence = f"Network state will be determined via {_join(selected_methods)}."
-        go_no_go_sentence = f"Go/No-Go criteria: {(go_no_go_text or '').strip() or 'TBD'}."
+        methods_sentence = (
+            f"Network state will be determined via {_join(selected_methods)}."
+        )
+        go_no_go_sentence = (
+            f"Go/No-Go criteria: {(go_no_go_text or '').strip() or 'TBD'}."
+        )
 
         if add_logic_choice == "Yes":
             additional_logic_sentence = f"Additional gating logic will be applied: {add_logic_text.strip() or 'TBD'}."
@@ -590,7 +594,11 @@ def main():
 
         orch_choice = st.radio(
             "Select an option",
-            ["No", "Yes – internal via custom scripts and logic", "Yes – provide details"],
+            [
+                "No",
+                "Yes – internal via custom scripts and logic",
+                "Yes – provide details",
+            ],
             key="orch_choice",
             horizontal=False,
         )
@@ -973,7 +981,9 @@ def main():
         )
 
         st.subheader("Staffing plan")
-        st.caption("Provide expected direct staffing and a short plan. Markdown is supported.")
+        st.caption(
+            "Provide expected direct staffing and a short plan. Markdown is supported."
+        )
         col_sp1, col_sp2 = st.columns([1, 3])
         with col_sp1:
             staff_count = st.number_input(
@@ -1008,7 +1018,8 @@ def main():
             options=region_options,
             index=region_options.index(
                 st.session_state.get("timeline_holiday_region", "None")
-                if st.session_state.get("timeline_holiday_region", "None") in region_options
+                if st.session_state.get("timeline_holiday_region", "None")
+                in region_options
                 else "None"
             ),
             help="Used to skip public holidays when computing business days.",
@@ -1046,7 +1057,9 @@ def main():
             cur = d
             while days > 0:
                 cur = cur + timedelta(days=1)
-                if cur.weekday() < 5 and (holiday_set is None or cur not in holiday_set):  # Mon=0 .. Sun=6
+                if cur.weekday() < 5 and (
+                    holiday_set is None or cur not in holiday_set
+                ):  # Mon=0 .. Sun=6
                     days -= 1
             return cur
 
@@ -1078,7 +1091,9 @@ def main():
                     {"name": "", "duration": 0, "notes": ""}
                 )
         with c_b:
-            st.caption("Use the fields below to edit milestone name, duration (business days), and notes.")
+            st.caption(
+                "Use the fields below to edit milestone name, duration (business days), and notes."
+            )
 
         # Render rows
         to_delete = []
@@ -1153,8 +1168,12 @@ def main():
                 f"Start: {start_date.strftime('%Y-%m-%d')} • Total duration: {total_bd} business days • Projected completion: {schedule[-1]['end'].strftime('%Y-%m-%d')}"
             )
             # Success/info callouts
-            st.success(f"Expected delivery date: {schedule[-1]['end'].strftime('%Y-%m-%d')}")
-            months_est = total_bd / 21.75 if total_bd else 0.0  # approx working days per month
+            st.success(
+                f"Expected delivery date: {schedule[-1]['end'].strftime('%Y-%m-%d')}"
+            )
+            months_est = (
+                total_bd / 21.75 if total_bd else 0.0
+            )  # approx working days per month
             years_est = months_est / 12.0 if months_est else 0.0
             st.info(
                 f"Approximate duration: {months_est:.1f} months ({years_est:.2f} years) based on business days"
@@ -1167,7 +1186,9 @@ def main():
                 )
 
             # Optional: Visual timeline
-            show_chart = st.checkbox("Show Gantt chart", value=True, key="_timeline_show_chart")
+            show_chart = st.checkbox(
+                "Show Gantt chart", value=True, key="_timeline_show_chart"
+            )
             if show_chart:
                 df = pd.DataFrame(
                     [
@@ -1181,7 +1202,9 @@ def main():
                     ]
                 )
                 if not df.empty:
-                    fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Task")
+                    fig = px.timeline(
+                        df, x_start="Start", x_end="Finish", y="Task", color="Task"
+                    )
                     fig.update_yaxes(autorange="reversed")  # earliest at top
                     fig.update_layout(height=380, margin=dict(l=0, r=0, t=30, b=0))
                     st.plotly_chart(fig, use_container_width=True)
@@ -1195,7 +1218,9 @@ def main():
             "timeline": {
                 "start_date": start_date.strftime("%Y-%m-%d"),
                 "total_business_days": total_bd,
-                "projected_completion": schedule[-1]["end"].strftime("%Y-%m-%d") if schedule else None,
+                "projected_completion": (
+                    schedule[-1]["end"].strftime("%Y-%m-%d") if schedule else None
+                ),
                 "staff_count": int(st.session_state.get("timeline_staff_count", 0)),
                 "staffing_plan_md": st.session_state.get("timeline_staffing_plan", ""),
                 "holiday_region": holiday_region,
@@ -1347,7 +1372,9 @@ def main():
                 # indent the plan to render as a sub-bullet
                 for pl in plan_md.splitlines()[:8]:  # cap lines for brevity
                     lines.append(f"  - {pl}")
-            for i in (timeline.get("items") or [])[:15]:  # cap to 15 for display brevity
+            for i in (timeline.get("items") or [])[
+                :15
+            ]:  # cap to 15 for display brevity
                 lines.append(
                     _md_line(
                         f"{i.get('name')}: {i.get('start')} → {i.get('end')} ({i.get('duration_bd')} bd)"
@@ -1363,7 +1390,10 @@ def main():
     if deps:
         # Build slim list for default detection
         deps_slim = [
-            {"name": (d or {}).get("name"), "details": (d or {}).get("details", "").strip()}
+            {
+                "name": (d or {}).get("name"),
+                "details": (d or {}).get("details", "").strip(),
+            }
             for d in deps
             if (d or {}).get("name")
         ]
@@ -1372,8 +1402,12 @@ def main():
             {"name": "Network Infrastructure", "details": ""},
             {"name": "Revision Control system", "details": "GitHub"},
         ]
+
         def _sorted(items):
-            return sorted(items, key=lambda x: (x.get("name") or "", x.get("details") or ""))
+            return sorted(
+                items, key=lambda x: (x.get("name") or "", x.get("details") or "")
+            )
+
         looks_default_deps = _sorted(deps_slim) == _sorted(default_deps)
 
         dep_lines = []
@@ -1390,7 +1424,9 @@ def main():
             st.markdown("\n".join(dep_lines))
 
     if not any_content:
-        st.info("Start filling in the sections above to see Solution Highlights here. Once you provide inputs, you will also be able to download the Wizard JSON.")
+        st.info(
+            "Start filling in the sections above to see Solution Highlights here. Once you provide inputs, you will also be able to download the Wizard JSON."
+        )
 
     # Markdown summary builder & export — only when there is meaningful content
     if any_content:
@@ -1472,7 +1508,9 @@ def main():
             details = (d or {}).get("details")
             if name:
                 dep_lines.append(f"- {name}{(': ' + details) if details else ''}")
-        summary_parts.append(_section_md("Dependencies & External Interfaces", dep_lines))
+        summary_parts.append(
+            _section_md("Dependencies & External Interfaces", dep_lines)
+        )
 
         # Timeline
         tl = payload.get("timeline", {})
@@ -1494,20 +1532,38 @@ def main():
         summary_md = ("".join(summary_parts)).strip()
         if summary_md:
             st.markdown("**Wizard Markdown summary**")
-            st.text_area("Summary (copy/paste)", summary_md, height=220, key="_wizard_summary_md_display")
+            st.text_area(
+                "Summary (copy/paste)",
+                summary_md,
+                height=220,
+                key="_wizard_summary_md_display",
+            )
             col_a, col_b, col_c = st.columns([1, 1, 1])
             with col_a:
-                if st.button("Send to Business Case 'Detailed solution description'", use_container_width=True):
+                if st.button(
+                    "Send to Business Case 'Detailed solution description'",
+                    use_container_width=True,
+                ):
                     # Queue updates; they will be applied before widgets render on next run
                     st.session_state["_set_solution_details_md"] = summary_md
-                    ini_payload = payload.get("initiative", {}) if isinstance(payload, dict) else {}
+                    ini_payload = (
+                        payload.get("initiative", {})
+                        if isinstance(payload, dict)
+                        else {}
+                    )
                     if ini_payload:
                         if ini_payload.get("title") is not None:
-                            st.session_state["_set_automation_title"] = ini_payload.get("title")
+                            st.session_state["_set_automation_title"] = ini_payload.get(
+                                "title"
+                            )
                         if ini_payload.get("description") is not None:
-                            st.session_state["_set_automation_description"] = ini_payload.get("description")
+                            st.session_state["_set_automation_description"] = (
+                                ini_payload.get("description")
+                            )
                         if ini_payload.get("out_of_scope") is not None:
-                            st.session_state["_set_out_of_scope"] = ini_payload.get("out_of_scope")
+                            st.session_state["_set_out_of_scope"] = ini_payload.get(
+                                "out_of_scope"
+                            )
                     st.success("Queued summary for Business Case. Redirecting…")
                     st.experimental_rerun()
             with col_b:
