@@ -61,8 +61,251 @@ def main():
         layout="wide",
     )
 
+    # Colors
+    hr_color_dict = utils.hr_colors()
+
     with st.sidebar:
         st.image("images/EIA Logo FINAL small_Round.png", width=75)
+
+    # One-time success notice after applying uploaded JSON (post-rerun)
+    if st.session_state.get("wizard_upload_applied", False):
+        st.success(
+            "Loaded Solution Wizard JSON into this session. Scroll to review, update, and save if needed."
+        )
+        del st.session_state["wizard_upload_applied"]
+
+    # Load saved Solution Wizard JSON (applies to current session) BEFORE instantiating widgets
+    with st.sidebar.expander("Load Saved Solution Wizard", expanded=False):
+        uploaded = st.file_uploader(
+            "Upload solution_wizard_*.json", type=["json"], key="wizard_upload_json"
+        )
+        processed_name = st.session_state.get("wizard_upload_processed_name")
+        if uploaded is not None:
+            # Validate filename pattern first
+            if not uploaded.name.startswith("solution_wizard_"):
+                st.error(
+                    "Invalid file. Please upload a file that starts with 'solution_wizard_' and is a JSON export from this tool."
+                )
+                st.caption(
+                    "Tip: Use the 'Download Wizard JSON' button in this page to generate a compatible file."
+                )
+            else:
+                already_loaded = processed_name == uploaded.name
+                load_btn = st.button(
+                    "Load uploaded JSON",
+                    type="primary",
+                    disabled=already_loaded,
+                    key="wizard_apply_upload_btn",
+                    help=(
+                        "This file is already loaded."
+                        if already_loaded
+                        else "Apply the uploaded values to this session."
+                    ),
+                )
+                if load_btn and not already_loaded:
+                    try:
+                        data = json.load(uploaded)
+                        if isinstance(data, dict):
+                            # Store full payload for Highlights/Export
+                            st.session_state["solution_wizard"] = data
+                            # Queue initiative basics for shared fields
+                            ini = data.get("initiative", {}) if isinstance(data, dict) else {}
+                            if ini:
+                                if ini.get("title") is not None:
+                                    st.session_state["_set_automation_title"] = ini.get("title")
+                                if ini.get("description") is not None:
+                                    st.session_state["_set_automation_description"] = ini.get("description")
+                                if ini.get("out_of_scope") is not None:
+                                    st.session_state["_set_out_of_scope"] = ini.get("out_of_scope")
+                            # Pre-populate key widgets from selections
+                            try:
+                                pres_sel = (data.get("presentation", {}) or {}).get("selections", {})
+                                # Users
+                                for u in pres_sel.get("users", []) or []:
+                                    st.session_state[f"pres_user_{u}"] = True
+                                # Interactions (support custom)
+                                known_interact = {"CLI", "Web GUI", "Other GUI", "API"}
+                                for it in pres_sel.get("interactions", []) or []:
+                                    if it in known_interact:
+                                        st.session_state[f"pres_interact_{it}"] = True
+                                    else:
+                                        st.session_state["pres_interact_custom_enable"] = True
+                                        st.session_state["pres_interact_custom"] = it
+                                # Tools (support custom)
+                                known_tools = {
+                                    "Python",
+                                    "Python Web Framework (Streamlit, Flask, etc.)",
+                                    "General Web Framework",
+                                    "Automation Framework",
+                                    "REST API",
+                                    "GraphQL API",
+                                    "Custom API",
+                                }
+                                for t in pres_sel.get("tools", []) or []:
+                                    if t in known_tools:
+                                        st.session_state[f"pres_tool_{t}"] = True
+                                    else:
+                                        st.session_state["pres_tool_custom_enable"] = True
+                                        st.session_state["pres_tool_custom"] = t
+                                # Auth (support other)
+                                known_auth = {
+                                    "No Authentication (suitable only for demos and very specific use cases)",
+                                    "Repository authorization/sharing",
+                                    "built in Authentication via Username/Password or TOKEN",
+                                    "Custom Authentication to external system (AD, SSH Keys, OAUTH2)",
+                                }
+                                for a in pres_sel.get("auth", []) or []:
+                                    if a in known_auth:
+                                        st.session_state[f"pres_auth_{a}"] = True
+                                    else:
+                                        st.session_state["pres_auth_other_enable"] = True
+                                        st.session_state["pres_auth_other_text"] = a
+                            except Exception:
+                                pass
+                            try:
+                                obs_sel = (data.get("observability", {}) or {}).get("selections", {})
+                                for m in obs_sel.get("methods", []) or []:
+                                    st.session_state[f"obs_state_{m}"] = True
+                                known_obs_tools = {
+                                    "SuzieQ Open Source",
+                                    "SuzieQ Enterprise",
+                                    "Network Vendor Product (Cisco Catalyst Center, Arista CVP, etc.)",
+                                    "Custom Python Scripts",
+                                }
+                                for t in obs_sel.get("tools", []) or []:
+                                    if t in known_obs_tools:
+                                        st.session_state[f"obs_tool_{t}"] = True
+                                    else:
+                                        st.session_state["obs_tool_other_enable"] = True
+                                        st.session_state["obs_tool_other_text"] = t
+                                if obs_sel.get("go_no_go_text") is not None:
+                                    st.session_state["obs_go_no_go"] = obs_sel.get("go_no_go_text")
+                                st.session_state["obs_add_logic_choice"] = "Yes" if obs_sel.get("additional_logic_enabled") else "No"
+                                if obs_sel.get("additional_logic_text") is not None:
+                                    st.session_state["obs_add_logic_text"] = obs_sel.get("additional_logic_text")
+                            except Exception:
+                                pass
+                            try:
+                                orch_sel = (data.get("orchestration", {}) or {}).get("selections", {})
+                                if orch_sel.get("choice") is not None:
+                                    st.session_state["orch_choice"] = orch_sel.get("choice")
+                                if orch_sel.get("details") is not None:
+                                    st.session_state["orch_details_text"] = orch_sel.get("details")
+                            except Exception:
+                                pass
+                            try:
+                                col_sel = (data.get("collector", {}) or {}).get("selections", {})
+                                for m in col_sel.get("methods", []) or []:
+                                    known = {"SNMP","CLI/SSH","NETCONF","gNMI","REST API","Webhooks","Syslog","Streaming Telemetry"}
+                                    if m in known:
+                                        st.session_state[f"collector_method_{m}"] = True
+                                    else:
+                                        st.session_state["collector_methods_other_enable"] = True
+                                        st.session_state["collector_methods_other"] = m
+                                for a in col_sel.get("auth", []) or []:
+                                    known = {"Username/Password","SSH Keys","OAuth2","API Token","mTLS"}
+                                    if a in known:
+                                        st.session_state[f"collector_auth_{a}"] = True
+                                    else:
+                                        st.session_state["collector_auth_other_enable"] = True
+                                        st.session_state["collector_auth_other"] = a
+                                for h in col_sel.get("handling", []) or []:
+                                    known = {"None","Rate limiting","Retries","Exponential backoff","Buffering/Queue"}
+                                    if h in known:
+                                        st.session_state[f"collector_handle_{h}"] = True
+                                    else:
+                                        st.session_state["collector_handling_other_enable"] = True
+                                        st.session_state["collector_handling_other"] = h
+                                for n in col_sel.get("normalization", []) or []:
+                                    known = {"None","Timestamping","Tagging/labels","Topology enrichment","Schema mapping"}
+                                    if n in known:
+                                        st.session_state[f"collector_norm_{n}"] = True
+                                    else:
+                                        st.session_state["collector_norm_other_enable"] = True
+                                        st.session_state["collector_norm_other"] = n
+                                for t in col_sel.get("tools", []) or []:
+                                    known = {"None","SuzieQ","Cisco Catalyst Center","Cisco Nexus Dashboard","Cisco ACI APIC","Arista CVP","Prometheus"}
+                                    if t in known:
+                                        st.session_state[f"collection_tool_{t}"] = True
+                                    else:
+                                        st.session_state["collection_tools_other_enable"] = True
+                                        st.session_state["collection_tools_other"] = t
+                                if col_sel.get("devices") is not None:
+                                    st.session_state["collector_devices"] = str(col_sel.get("devices"))
+                                if col_sel.get("metrics_per_sec") is not None:
+                                    st.session_state["collector_metrics"] = str(col_sel.get("metrics_per_sec"))
+                                if col_sel.get("cadence") is not None:
+                                    st.session_state["collector_cadence"] = str(col_sel.get("cadence"))
+                            except Exception:
+                                pass
+                            # Timeline: staff, plan, region, start date, milestones
+                            try:
+                                tl = data.get("timeline", {}) or {}
+                                if tl.get("staff_count") is not None:
+                                    st.session_state["timeline_staff_count"] = int(tl.get("staff_count") or 0)
+                                if tl.get("staffing_plan_md") is not None:
+                                    st.session_state["timeline_staffing_plan"] = tl.get("staffing_plan_md")
+                                if tl.get("holiday_region") is not None:
+                                    st.session_state["timeline_holiday_region"] = tl.get("holiday_region") or "None"
+                                if tl.get("start_date"):
+                                    _sd = tl.get("start_date")
+                                    _parsed = None
+                                    try:
+                                        from datetime import datetime as _dt
+                                        _parsed = _dt.fromisoformat(str(_sd)).date()
+                                    except Exception:
+                                        try:
+                                            from datetime import datetime as _dt
+                                            _parsed = _dt.strptime(str(_sd), "%Y-%m-%d").date()
+                                        except Exception:
+                                            _parsed = None
+                                    if _parsed is not None:
+                                        st.session_state["timeline_start_date"] = _parsed
+                                items = tl.get("items") or []
+                                if items:
+                                    ms = []
+                                    for it in items:
+                                        ms.append({
+                                            "name": (it.get("name") or ""),
+                                            "duration": int(it.get("duration_bd") or 0),
+                                            "notes": it.get("notes") or "",
+                                        })
+                                    st.session_state["timeline_milestones"] = ms
+                            except Exception:
+                                pass
+                            # Dependencies: map payload list back to checkbox keys
+                            try:
+                                dep_list = data.get("dependencies", []) or []
+                                label_to_key = {
+                                    "Network Infrastructure": "network_infra",
+                                    "Network Controllers": "network_controllers",
+                                    "Revision Control system": "revision_control",
+                                    "ITSM/Change Management System": "itsm",
+                                    "Authentication System": "authn",
+                                    "IPAMS Systems": "ipams",
+                                    "Inventory Systems": "inventory",
+                                    "Design Data/Intent Systems": "design_intent",
+                                    "Observability System": "observability",
+                                    "Vendor Tool/Management System": "vendor_mgmt",
+                                }
+                                for d in dep_list:
+                                    lbl = (d or {}).get("name")
+                                    details = (d or {}).get("details", "")
+                                    key = label_to_key.get(lbl)
+                                    if key:
+                                        st.session_state[f"dep_{key}"] = True
+                                        if details:
+                                            st.session_state[f"dep_{key}_details"] = details
+                            except Exception:
+                                pass
+                            # Mark applied and rerun so widgets pick up values without mutation errors
+                            st.session_state["wizard_upload_processed_name"] = uploaded.name
+                            st.session_state["wizard_upload_applied"] = True
+                            st.rerun()
+                        else:
+                            st.error("Uploaded JSON is not a valid Solution Wizard export (expected an object).")
+                    except Exception as e:
+                        st.error(f"Failed to load JSON: {e}")
 
     # Title with NAF icon
     title_cols = st.columns([0.08, 0.92])
@@ -106,8 +349,8 @@ def main():
             st.session_state[_dst] = st.session_state[_src]
             del st.session_state[_src]
 
-    # Initiative basics (shared with Business Case page)
-    with st.expander("Initiative basics", expanded=False):
+    # Automation Project Title & Short Description (shared with Business Case page)
+    with st.expander("Automation Project Title & Description", expanded=True):
         st.caption("These fields sync with the Business Case Calculator.")
         col_ib1, col_ib2 = st.columns([2, 3])
         with col_ib1:
@@ -189,7 +432,7 @@ def main():
             """
         )
 
-    utils.thick_hr(color="grey", thickness=5)
+    utils.thick_hr(color=hr_color_dict["naf_yellow"], thickness=5)
     st.markdown("***Expand each section of the framework to work though the wizard***")
 
     # Presentation section
@@ -906,7 +1149,7 @@ def main():
         st.session_state["solution_wizard"] = merged_exec
 
     # Transition to external interfaces and planning
-    utils.thick_hr(color="grey", thickness=5)
+    utils.thick_hr(color=hr_color_dict["naf_yellow"], thickness=5)
     st.markdown(
         "While the framework helps you think about the technical implementation, for a complete project let's now consider external interfaces, staffing, and timelines."
     )
@@ -1311,7 +1554,7 @@ def main():
         st.session_state["solution_wizard"] = merged_tl
 
     # Live narrative preview
-    utils.thick_hr(color="grey", thickness=5)
+    utils.thick_hr(color=hr_color_dict["naf_yellow"], thickness=5)
     st.subheader("Solution Highlights")
     payload = st.session_state.get("solution_wizard", {})
 
